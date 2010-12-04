@@ -6,6 +6,7 @@
 
 PHP_MINIT_FUNCTION(phpiredis);
 PHP_FUNCTION(phpiredis_connect);
+PHP_FUNCTION(phpiredis_disconnect);
 
 extern zend_module_entry phpiredis_module_entry;
 #define phpext_phpiredis_ptr &phpiredis_module_entry

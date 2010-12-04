@@ -56,13 +56,18 @@ PHP_MINIT_FUNCTION(phpiredis)
 
 PHP_FUNCTION(phpiredis_connect)
 {
-    redisContext *c;
-    //redisReply *reply;
+    char *ip;
+    int ip_size;
 
-    c = redisConnect((char*)"127.0.0.1", 6379);
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &ip, &ip_size) == FAILURE) {
+        return;
+    }
+
+    redisContext *c;
+    c = redisConnect(ip, 6379);
     if (c->err) {
         redisFree(c);
-        RETVAL_FALSE;
+        RETURN_FALSE;
     }
 
     phpiredis_connection *connection = emalloc(sizeof(phpiredis_connection));

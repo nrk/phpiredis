@@ -12,6 +12,7 @@
 
 static function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_connect, NULL)
+    PHP_FE(phpiredis_disconnect, NULL)
     {NULL, NULL, NULL}
 };
 
@@ -75,6 +76,22 @@ PHP_FUNCTION(phpiredis_connect)
     phpiredis_connection *connection = emalloc(sizeof(phpiredis_connection));
     connection->c = c;
     ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_context);
+}
+
+PHP_FUNCTION(phpiredis_disconnect)
+{
+    zval *connection;
+    redisContext *c;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &connection) == FAILURE) {
+        return;
+    }
+
+    ZEND_FETCH_RESOURCE(c, redisContext *, &connection, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context);
+
+    zend_list_delete(Z_LVAL_P(connection));
+
+    RETURN_TRUE;
 }
 
 PHP_FUNCTION(phpiredis_get)

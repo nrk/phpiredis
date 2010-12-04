@@ -58,13 +58,15 @@ PHP_FUNCTION(phpiredis_connect)
 {
     char *ip;
     int ip_size;
+    long port = 6379;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &ip, &ip_size) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &ip, &ip_size, &port) == FAILURE) {
         return;
     }
 
     redisContext *c;
-    c = redisConnect(ip, 6379);
+    c = redisConnect(ip, (int)port); // FIXME: unsafe cast
+
     if (c->err) {
         redisFree(c);
         RETURN_FALSE;

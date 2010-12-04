@@ -12,9 +12,9 @@ config.status
 config.sub
 configure
 configure.in
-hello.la
-hello.lo
-hello.so
+*.la
+*.lo
+*.so
 install-sh
 libtool
 ltmain.sh
@@ -22,4 +22,4 @@ missing
 mkinstalldirs
 modules
 run-tests.php
-
+*~

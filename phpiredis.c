@@ -13,6 +13,7 @@
 static function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_connect, NULL)
     PHP_FE(phpiredis_disconnect, NULL)
+    PHP_FE(phpiredis_command, NULL)
     {NULL, NULL, NULL}
 };
 
@@ -94,16 +95,55 @@ PHP_FUNCTION(phpiredis_disconnect)
     RETURN_TRUE;
 }
 
-PHP_FUNCTION(phpiredis_get)
+
+void convert_redis_to_php(zval* return_value, redisReply* reply) {
+    //int type; /* REDIS_REPLY_* */
+    //long long integer; /* The integer when type is REDIS_REPLY_INTEGER */
+    //int len; /* Length of string */
+    //char *str; /* Used for both REDIS_REPLY_ERROR and REDIS_REPLY_STRING */
+    //size_t elements; /* number of elements, for REDIS_REPLY_ARRAY */
+    //struct redisReply **element; /* elements vector for REDIS_REPLY_ARRAY */
+    switch (reply->type) {
+        case REDIS_REPLY_INTEGER:
+            ZVAL_LONG(return_value, reply->integer);
+            return;
+        case REDIS_REPLY_STATUS:
+        case REDIS_REPLY_STRING:
+            ZVAL_STRINGL(return_value, reply->str, reply->len, 1);
+            return;
+        case REDIS_REPLY_ARRAY:
+            array_init(return_value);
+            int j;
+            for (j = 0; j < reply->elements; j++) {
+                add_index_string(return_value, j, reply->element[j]->str, 1);
+            }
+            return;
+	case REDIS_REPLY_NIL:
+            ZVAL_NULL(return_value);
+            return;
+    }
+}
+
+PHP_FUNCTION(phpiredis_command)
 {
-    /* PING server * /
-    reply = redisCommand(c,"PING");
-    char* ret = emalloc(sizeof(char) * reply->len);
-    memcpy(ret, reply->str, reply->len);
-    //printf("PING: %s\n", reply->str);
+    zval *resource;
+    redisReply *reply;
+    phpiredis_connection *connection;
+    char *command;
+    int command_size;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", &resource, &command, &command_size) == FAILURE) {
+        return;
+    }
+
+    ZEND_FETCH_RESOURCE(connection, redisContext *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context);
+
+    reply = redisCommand(connection->c,command);
+    if (reply->type == REDIS_REPLY_ERROR) {
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
+        RETURN_FALSE;
+        return;
+    }
+    convert_redis_to_php(return_value, reply);
     freeReplyObject(reply);
-
-
-    RETURN_STRING(reply->str, 1);
-*/
 }

@@ -12,6 +12,7 @@
 
 static function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_connect, NULL)
+    PHP_FE(phpiredis_pconnect, NULL)
     PHP_FE(phpiredis_disconnect, NULL)
     PHP_FE(phpiredis_command, NULL)
     {NULL, NULL, NULL}
@@ -39,8 +40,18 @@ ZEND_GET_MODULE(phpiredis)
 #endif
 
 #define PHPIREDIS_CONNECTION_NAME "phpredis connection"
+#define PHPIREDIS_PERSISTENT_CONNECTION_NAME "phpredis connection persistent"
 
 static void php_redis_connection_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
+{
+    phpiredis_connection *connection = (phpiredis_connection*)rsrc->ptr;
+
+    if (connection) {
+        redisFree(connection->c);
+    }
+}
+
+static void php_redis_connection_persist(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
     phpiredis_connection *connection = (phpiredis_connection*)rsrc->ptr;
 
@@ -49,11 +60,69 @@ static void php_redis_connection_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
     }
 }
 
+
 int le_redis_context;
+int le_redis_persistent_context;
 PHP_MINIT_FUNCTION(phpiredis)
 {
     le_redis_context = zend_register_list_destructors_ex(php_redis_connection_dtor, NULL, PHPIREDIS_CONNECTION_NAME, module_number);
+    le_redis_persistent_context = zend_register_list_destructors_ex(NULL, php_redis_connection_persist, PHPIREDIS_PERSISTENT_CONNECTION_NAME, module_number);
     return SUCCESS;
+}
+
+PHP_FUNCTION(phpiredis_pconnect)
+{
+    char *ip;
+    int ip_size;
+    long port = 6379;
+
+    char *hashed_details=NULL;
+    int hashed_details_length;
+    phpiredis_connection *connection;
+
+    zend_rsrc_list_entry *le;
+
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &ip, &ip_size, &port) == FAILURE) {
+        return;
+    }
+
+    hashed_details_length = spprintf(&hashed_details, 0, "phpiredis_%s_%d", ip, (int)port);
+
+    if (zend_hash_find(&EG(persistent_list), hashed_details, hashed_details_length+1, (void **) &le)!=FAILURE) {
+        if (Z_TYPE_P(le) != le_redis_persistent_context) {
+            RETURN_FALSE;
+        }
+
+        connection = (phpiredis_connection *) le->ptr;
+        ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_persistent_context);
+        // TODO: ping and reconnect
+        efree(hashed_details);
+        return;
+    }
+
+    redisContext *c;
+    c = redisConnect(ip, (int)port); // FIXME: unsafe cast
+
+    if (c->err) {
+        redisFree(c);
+        RETURN_FALSE;
+    }
+
+    connection = emalloc(sizeof(phpiredis_connection));
+    connection->c = c;
+
+    zend_rsrc_list_entry new_le;
+    new_le.type = le_redis_persistent_context;
+    new_le.ptr = connection;
+    if (zend_hash_update(&EG(persistent_list), hashed_details, hashed_details_length+1, (void *) &new_le, sizeof(zend_rsrc_list_entry), NULL)==FAILURE) {
+        efree(connection);
+        efree(hashed_details);
+        RETURN_FALSE;
+    }
+
+    efree(hashed_details);
+    ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_persistent_context);
 }
 
 PHP_FUNCTION(phpiredis_connect)
@@ -88,7 +157,7 @@ PHP_FUNCTION(phpiredis_disconnect)
         return;
     }
 
-    ZEND_FETCH_RESOURCE(c, redisContext *, &connection, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context);
+    ZEND_FETCH_RESOURCE2(c, redisContext *, &connection, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
 
     zend_list_delete(Z_LVAL_P(connection));
 
@@ -136,7 +205,7 @@ PHP_FUNCTION(phpiredis_command)
         return;
     }
 
-    ZEND_FETCH_RESOURCE(connection, redisContext *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context);
+    ZEND_FETCH_RESOURCE2(connection, redisContext *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
 
     reply = redisCommand(connection->c,command);
     if (reply->type == REDIS_REPLY_ERROR) {

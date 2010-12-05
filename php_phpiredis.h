@@ -6,6 +6,7 @@
 
 PHP_MINIT_FUNCTION(phpiredis);
 PHP_FUNCTION(phpiredis_connect);
+PHP_FUNCTION(phpiredis_pconnect);
 PHP_FUNCTION(phpiredis_disconnect);
 PHP_FUNCTION(phpiredis_command);
 

@@ -115,7 +115,7 @@ void convert_redis_to_php(zval* return_value, redisReply* reply) {
             array_init(return_value);
             int j;
             for (j = 0; j < reply->elements; j++) {
-                add_index_string(return_value, j, reply->element[j]->str, 1);
+                add_index_stringl(return_value, j, reply->element[j]->str, reply->element[j]->len, 1);
             }
             return;
 	case REDIS_REPLY_NIL:

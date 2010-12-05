@@ -9,6 +9,7 @@ PHP_FUNCTION(phpiredis_connect);
 PHP_FUNCTION(phpiredis_pconnect);
 PHP_FUNCTION(phpiredis_disconnect);
 PHP_FUNCTION(phpiredis_command);
+PHP_FUNCTION(phpiredis_multi_command);
 
 extern zend_module_entry phpiredis_module_entry;
 #define phpext_phpiredis_ptr &phpiredis_module_entry

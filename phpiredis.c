@@ -15,6 +15,7 @@ static function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_pconnect, NULL)
     PHP_FE(phpiredis_disconnect, NULL)
     PHP_FE(phpiredis_command, NULL)
+    PHP_FE(phpiredis_multi_command, NULL)
     {NULL, NULL, NULL}
 };
 
@@ -187,9 +188,70 @@ void convert_redis_to_php(zval* return_value, redisReply* reply) {
                 add_index_stringl(return_value, j, reply->element[j]->str, reply->element[j]->len, 1);
             }
             return;
-	case REDIS_REPLY_NIL:
+        case REDIS_REPLY_NIL:
+        default:
             ZVAL_NULL(return_value);
             return;
+    }
+}
+
+PHP_FUNCTION(phpiredis_multi_command)
+{
+    zval         **tmp;
+    HashPosition   pos;
+    zval *resource;
+    redisReply *reply;
+    phpiredis_connection *connection;
+    zval *arr;
+    zval **arg2;
+    int commands;
+    int i;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rZ", &resource, &arg2) == FAILURE) {
+        return;
+    }
+
+    ZEND_FETCH_RESOURCE2(connection, redisContext *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
+
+    arr = *arg2;
+    zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(arr), &pos);
+
+    commands = 0;
+    while (zend_hash_get_current_data_ex(Z_ARRVAL_P(arr), (void **) &tmp, &pos) == SUCCESS) {
+        switch ((*tmp)->type) {
+                case IS_STRING:
+                        ++commands;
+                        redisAppendCommand(connection->c,Z_STRVAL_PP(tmp));
+                        break;
+
+                case IS_OBJECT: {
+                        ++commands;
+                        int copy;
+                        zval expr;
+                        zend_make_printable_zval(*tmp, &expr, &copy);
+                        redisAppendCommand(connection->c,Z_STRVAL(expr));
+                        if (copy) {
+                                zval_dtor(&expr);
+                        }
+                }
+                        break;
+
+                default:
+                        php_error_docref(NULL TSRMLS_CC, E_WARNING, "Array argument must contain strings");
+                        break;
+        }
+        zend_hash_move_forward_ex(Z_ARRVAL_P(arr), &pos);
+    }
+
+    array_init(return_value);
+    for (i = 0; i < commands; ++i) {
+        zval* result;
+        MAKE_STD_ZVAL(result);
+        redisReply *reply;
+        redisGetReply(connection->c,&reply);
+        convert_redis_to_php(result, reply);
+        add_index_zval(return_value, i, result);
+        freeReplyObject(reply);
     }
 }
 

@@ -271,7 +271,7 @@ PHP_FUNCTION(phpiredis_command)
 
     reply = redisCommand(connection->c,command);
     if (reply->type == REDIS_REPLY_ERROR) {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str+4);
         RETURN_FALSE;
         return;
     }

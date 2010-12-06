@@ -23,3 +23,4 @@ mkinstalldirs
 modules
 run-tests.php
 *~
+phpiredis.loT

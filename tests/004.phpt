@@ -1,5 +1,5 @@
 --TEST--
-phpiredis multicommand
+phpiredis array
 --SKIPIF--
 <?php include 'skipif.inc'; ?>
 --FILE--

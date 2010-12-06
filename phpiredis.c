@@ -15,6 +15,7 @@ static function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_pconnect, NULL)
     PHP_FE(phpiredis_disconnect, NULL)
     PHP_FE(phpiredis_command, NULL)
+    PHP_FE(phpiredis_command_bs, NULL)
     PHP_FE(phpiredis_multi_command, NULL)
     {NULL, NULL, NULL}
 };
@@ -271,6 +272,79 @@ PHP_FUNCTION(phpiredis_command)
 
     reply = redisCommand(connection->c,command);
     if (reply->type == REDIS_REPLY_ERROR) {
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str+4);
+        RETURN_FALSE;
+        return;
+    }
+    convert_redis_to_php(return_value, reply);
+    freeReplyObject(reply);
+}
+
+PHP_FUNCTION(phpiredis_command_bs)
+{
+    zval *resource;
+    redisReply *reply;
+    phpiredis_connection *connection;
+    zval *params;
+    int argc;
+    char ** argv;
+    size_t * argvlen;
+    zval         **tmp;
+    HashPosition   pos;
+    int i;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ra", &resource, &params) == FAILURE) {
+        return;
+    }
+
+    ZEND_FETCH_RESOURCE2(connection, redisContext *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
+
+    argc = zend_hash_num_elements(Z_ARRVAL_P(params));
+    argvlen = malloc(sizeof(size_t) * argc);
+    argv = malloc(sizeof(char*) * argc);
+
+    i = 0;
+    zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(params), &pos);
+    while (zend_hash_get_current_data_ex(Z_ARRVAL_P(params), (void **) &tmp, &pos) == SUCCESS) {
+        switch ((*tmp)->type) {
+                case IS_STRING: {
+                        argvlen[i] = (size_t) Z_STRLEN_PP(tmp);
+                        argv[i] = malloc(sizeof(char) * argvlen[i]);
+                        memcpy(argv[i], Z_STRVAL_PP(tmp), argvlen[i]);
+                }
+                        break;
+
+                case IS_OBJECT: {
+                        int copy;
+                        zval expr;
+                        zend_make_printable_zval(*tmp, &expr, &copy);
+                        argvlen[i] = Z_STRLEN(expr);
+                        argv[i] = malloc(sizeof(char) * argvlen[i]);
+                        memcpy(argv[i], Z_STRVAL(expr), argvlen[i]);
+                        if (copy) {
+                                zval_dtor(&expr);
+                        }
+                }
+                        break;
+
+                default:
+                        php_error_docref(NULL TSRMLS_CC, E_WARNING, "Array argument must contain strings");
+                        break;
+        }
+        zend_hash_move_forward_ex(Z_ARRVAL_P(params), &pos);
+        ++i;
+    }
+
+    redisAppendCommandArgv(connection->c, argc, argv, (const size_t *) argvlen);
+    for (i = 0; i < argc; i++) {
+        free(argv[i]);
+    }
+    free(argv);
+    free(argvlen);
+
+    redisGetReply(connection->c,&reply);
+    if (reply->type == REDIS_REPLY_ERROR) {
+        efree(params);
         php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str+4);
         RETURN_FALSE;
         return;

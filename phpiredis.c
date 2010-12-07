@@ -49,6 +49,7 @@ static void php_redis_connection_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
     phpiredis_connection *connection = (phpiredis_connection*)rsrc->ptr;
 
     if (connection) {
+        efree(connection->ip);
         redisFree(connection->c);
     }
 }
@@ -58,6 +59,7 @@ static void php_redis_connection_persist(zend_rsrc_list_entry *rsrc TSRMLS_DC)
     phpiredis_connection *connection = (phpiredis_connection*)rsrc->ptr;
 
     if (connection) {
+       efree(connection->ip);
        redisFree(connection->c);
     }
 }
@@ -98,7 +100,6 @@ PHP_FUNCTION(phpiredis_pconnect)
 
         connection = (phpiredis_connection *) le->ptr;
         ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_persistent_context);
-        // TODO: ping and reconnect
         efree(hashed_details);
         return;
     }
@@ -107,12 +108,15 @@ PHP_FUNCTION(phpiredis_pconnect)
     c = redisConnect(ip, (int)port); // FIXME: unsafe cast
 
     if (c->err) {
+        efree(ip);
         redisFree(c);
         RETURN_FALSE;
     }
 
     connection = emalloc(sizeof(phpiredis_connection));
     connection->c = c;
+    connection->ip = ip;
+    connection->port = port;
 
     zend_rsrc_list_entry new_le;
     new_le.type = le_redis_persistent_context;
@@ -147,6 +151,8 @@ PHP_FUNCTION(phpiredis_connect)
 
     phpiredis_connection *connection = emalloc(sizeof(phpiredis_connection));
     connection->c = c;
+    connection->ip = ip;
+    connection->port = port;
     ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_context);
 }
 
@@ -259,7 +265,7 @@ PHP_FUNCTION(phpiredis_multi_command)
 PHP_FUNCTION(phpiredis_command)
 {
     zval *resource;
-    redisReply *reply;
+    redisReply *reply = NULL;
     phpiredis_connection *connection;
     char *command;
     int command_size;
@@ -270,11 +276,28 @@ PHP_FUNCTION(phpiredis_command)
 
     ZEND_FETCH_RESOURCE2(connection, redisContext *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
 
-    reply = redisCommand(connection->c,command);
-    if (reply->type == REDIS_REPLY_ERROR) {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str+4);
-        RETURN_FALSE;
-        return;
+    while (reply == NULL || reply->type == REDIS_REPLY_ERROR)
+    {
+        reply = redisCommand(connection->c,command);
+        if (reply == NULL) {
+            redisFree(connection->c);
+            redisContext* c = redisConnect(connection->ip, (int)connection->port);
+
+            if (c->err) {
+                redisFree(c);
+                RETURN_FALSE;
+                return;
+            }
+            connection->c = c;
+        } else if (reply->type == REDIS_REPLY_ERROR) {
+            if (connection->c == REDIS_OK) { // The problem was the command
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str+4);
+                RETURN_FALSE;
+                return;
+            } else {
+                // TODO: whats happening here?
+            }
+        }
     }
     convert_redis_to_php(return_value, reply);
     freeReplyObject(reply);

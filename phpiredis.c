@@ -49,8 +49,11 @@ static void php_redis_connection_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
     phpiredis_connection *connection = (phpiredis_connection*)rsrc->ptr;
 
     if (connection) {
-        efree(connection->ip);
-        redisFree(connection->c);
+        free(connection->ip);
+        if (connection->c != NULL)
+        {
+            redisFree(connection->c);
+        }
     }
 }
 
@@ -59,8 +62,11 @@ static void php_redis_connection_persist(zend_rsrc_list_entry *rsrc TSRMLS_DC)
     phpiredis_connection *connection = (phpiredis_connection*)rsrc->ptr;
 
     if (connection) {
-       efree(connection->ip);
-       redisFree(connection->c);
+       free(connection->ip);
+       if (connection->c != NULL)
+       {
+           redisFree(connection->c);
+       }
     }
 }
 
@@ -115,7 +121,8 @@ PHP_FUNCTION(phpiredis_pconnect)
 
     connection = emalloc(sizeof(phpiredis_connection));
     connection->c = c;
-    connection->ip = ip;
+    connection->ip = malloc(sizeof(char) * strlen(ip));
+    strcpy(connection->ip, ip);
     connection->port = port;
 
     zend_rsrc_list_entry new_le;
@@ -151,7 +158,8 @@ PHP_FUNCTION(phpiredis_connect)
 
     phpiredis_connection *connection = emalloc(sizeof(phpiredis_connection));
     connection->c = c;
-    connection->ip = ip;
+    connection->ip = malloc(sizeof(char) * strlen(ip));
+    strcpy(connection->ip, ip);
     connection->port = port;
     ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_context);
 }
@@ -281,10 +289,11 @@ PHP_FUNCTION(phpiredis_command)
         reply = redisCommand(connection->c,command);
         if (reply == NULL) {
             redisFree(connection->c);
-            redisContext* c = redisConnect(connection->ip, (int)connection->port);
+            redisContext* c = redisConnect(connection->ip, connection->port);
 
             if (c->err) {
                 redisFree(c);
+                connection->c = NULL;
                 RETURN_FALSE;
                 return;
             }

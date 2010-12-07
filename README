@@ -2,13 +2,14 @@ Installing
 ----------
 Clone the git repository ("git clone git://github.com/seppo0010/phpiredis.git") and go to the new folder ("cd phpiredis").
 Initialize and update the submodules ("git submodule init && git submodule update").
+On some installs, you might need to install php-dev (In Ubuntu "sudo apt-get install php5-dev")
 Configure and build the extension ("phpize && ./configure  --enable-phpiredis && make").
+Copy the extension (modules/phpiredis.so) to your php extensions directory and edit your php.ini to load by default.
 Run the tests ("make test"). If some of the test fails, please create an issue on github (http://github.com/seppo0010/phpiredis/issues).
 
 
 Usage
 -----
-Copy the extension to your php extensions directory and edit your php.ini to load by default.
 To connect to the redis server just call phpiredis_connect with the server ip as the parameter. You can also specify a port as a second parameter, but by default it will use redis default (6379).
 You can simple commands with
 phpiredis_command($link, 'DEL test');

@@ -121,7 +121,7 @@ PHP_FUNCTION(phpiredis_pconnect)
 
     connection = emalloc(sizeof(phpiredis_connection));
     connection->c = c;
-    connection->ip = malloc(sizeof(char) * strlen(ip));
+    connection->ip = malloc(sizeof(char) * strlen(ip) + 1);
     strcpy(connection->ip, ip);
     connection->port = port;
 
@@ -158,7 +158,7 @@ PHP_FUNCTION(phpiredis_connect)
 
     phpiredis_connection *connection = emalloc(sizeof(phpiredis_connection));
     connection->c = c;
-    connection->ip = malloc(sizeof(char) * strlen(ip));
+    connection->ip = malloc(sizeof(char) * strlen(ip) + 1);
     strcpy(connection->ip, ip);
     connection->port = port;
     ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_context);

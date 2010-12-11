@@ -1,7 +1,7 @@
 --TEST--
-phpiredis command binary safe using image
+phpiredis reconnect on disconnect
 --SKIPIF--
-<?php include 'skipif.inc'; if (!function_exists('imagecreate') || !function_exists('imagepng')) die('Need GD library to run this test'); ?>
+<?php include 'skipif.inc'; ?>
 --FILE--
 <?php
 require_once('connect.inc');

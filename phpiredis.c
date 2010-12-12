@@ -263,7 +263,13 @@ PHP_FUNCTION(phpiredis_multi_command)
         zval* result;
         MAKE_STD_ZVAL(result);
         redisReply *reply;
-        redisGetReply(connection->c,&reply);
+        if (redisGetReply(connection->c,&reply) != REDIS_OK)
+        {
+            for (; i < commands; ++i) {
+                add_index_bool(return_value, i, 0);
+            }
+            break;
+        }
         convert_redis_to_php(result, reply);
         add_index_zval(return_value, i, result);
         freeReplyObject(reply);

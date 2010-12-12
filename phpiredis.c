@@ -380,7 +380,12 @@ PHP_FUNCTION(phpiredis_command_bs)
     free(argv);
     free(argvlen);
 
-    redisGetReply(connection->c,&reply);
+    if (redisGetReply(connection->c,&reply) != REDIS_OK) {
+        efree(params);
+        RETURN_FALSE;
+        return;
+    }
+
     if (reply->type == REDIS_REPLY_ERROR) {
         efree(params);
         php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str+4);

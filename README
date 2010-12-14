@@ -29,3 +29,8 @@ Contributing
 Downloading and testing is really welcome!
 Also fork the project on github and help with the todo list.
 For new features please send me a message on github or in the IRC #redis channel in freenode.
+
+Author
+------
+Phpiredis was written by Sebastian Waisbrot (seppo0010 at gmail) and is released under the BSD license.
+For details about Hiredis license, please check lib/hiredis.

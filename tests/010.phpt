@@ -7,11 +7,11 @@ phpiredis reconnect on disconnect
 var_dump(phpiredis_format_command(array('a', 's', 'd')));
 ?>
 --EXPECTF--
-array(3) {
-  [0]=>
-  string(1) "1"
-  [1]=>
-  string(2) "OK"
-  [2]=>
-  bool(false)
-}
+string(25) "*3
+$1
+a
+$1
+s
+$1
+d
+"

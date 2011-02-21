@@ -17,6 +17,7 @@ static function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_command, NULL)
     PHP_FE(phpiredis_command_bs, NULL)
     PHP_FE(phpiredis_multi_command, NULL)
+    PHP_FE(phpiredis_format_command, NULL)
     {NULL, NULL, NULL}
 };
 
@@ -274,6 +275,79 @@ PHP_FUNCTION(phpiredis_multi_command)
         add_index_zval(return_value, i, result);
         freeReplyObject(reply);
     }
+}
+
+PHP_FUNCTION(phpiredis_format_command)
+{
+    zval         **tmp;
+    HashPosition   pos;
+    zval *arr;
+    zval **arg;
+
+    int size = 0;
+    char **elements;
+    size_t *elementslen;
+    int elementstmpsize = 10;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Z", &arg) == FAILURE) {
+        return;
+    }
+
+    arr = *arg;
+    zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(arr), &pos);
+
+    elements = malloc(sizeof(char*) * elementstmpsize);
+    elementslen = malloc(sizeof(int) * elementstmpsize);
+    while (zend_hash_get_current_data_ex(Z_ARRVAL_P(arr), (void **) &tmp, &pos) == SUCCESS) {
+        if (size == elementstmpsize) {
+            elementstmpsize *= 2;
+            if (elementstmpsize == 0) elementstmpsize = 1;
+            elements = (char **)realloc(elements, sizeof(char*) * elementstmpsize);
+            elementslen = (size_t *)realloc(elementslen, sizeof(int) * elementstmpsize);
+        }
+
+        switch ((*tmp)->type) {
+                case IS_STRING: {
+                        elementslen[size] = (size_t) Z_STRLEN_PP(tmp);
+                        elements[size] = malloc(sizeof(char) * elementslen[size]);
+                        memcpy(elements[size], Z_STRVAL_PP(tmp), elementslen[size]);
+                }
+                        break;
+
+                case IS_OBJECT: {
+                        int copy;
+                        zval expr;
+                        zend_make_printable_zval(*tmp, &expr, &copy);
+                        elementslen[size] = (size_t) Z_STRLEN(expr);
+                        elements[size] = malloc(sizeof(char) * elementslen[size]);
+                        memcpy(elements[size], Z_STRVAL(expr), elementslen[size]);
+                        if (copy) {
+                                zval_dtor(&expr);
+                        }
+                }
+                        break;
+
+                default: {
+                        php_error_docref(NULL TSRMLS_CC, E_WARNING, "Array argument must contain strings");
+                        elementslen[size] = 0;
+                }
+                        break;
+        }
+
+        zend_hash_move_forward_ex(Z_ARRVAL_P(arr), &pos);
+        ++size;
+    }
+
+    char *cmd;
+    int len;
+    len = redisFormatCommandArgv(&cmd,size,elements,elementslen);
+
+    ZVAL_STRINGL(return_value, cmd, len, 1);
+    for (;size>0;--size)
+	    free(elements[size-1]);
+    free(elements);
+    free(elementslen);
+    free(cmd);
 }
 
 PHP_FUNCTION(phpiredis_command)

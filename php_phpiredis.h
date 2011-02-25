@@ -12,6 +12,11 @@ PHP_FUNCTION(phpiredis_command_bs);
 PHP_FUNCTION(phpiredis_command);
 PHP_FUNCTION(phpiredis_multi_command);
 PHP_FUNCTION(phpiredis_format_command);
+PHP_FUNCTION(phpiredis_reader_create);
+PHP_FUNCTION(phpiredis_reader_feed);
+PHP_FUNCTION(phpiredis_reader_get_state);
+PHP_FUNCTION(phpiredis_reader_get_reply);
+PHP_FUNCTION(phpiredis_reader_destroy);
 
 extern zend_module_entry phpiredis_module_entry;
 #define phpext_phpiredis_ptr &phpiredis_module_entry

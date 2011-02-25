@@ -18,6 +18,11 @@ static function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_command_bs, NULL)
     PHP_FE(phpiredis_multi_command, NULL)
     PHP_FE(phpiredis_format_command, NULL)
+    PHP_FE(phpiredis_reader_create, NULL)
+    //PHP_FE(phpiredis_reader_feed, NULL)
+    //PHP_FE(phpiredis_reader_get_state, NULL)
+    //PHP_FE(phpiredis_reader_get_reply, NULL)
+    PHP_FE(phpiredis_reader_destroy, NULL)
     {NULL, NULL, NULL}
 };
 
@@ -44,6 +49,16 @@ ZEND_GET_MODULE(phpiredis)
 
 #define PHPIREDIS_CONNECTION_NAME "phpredis connection"
 #define PHPIREDIS_PERSISTENT_CONNECTION_NAME "phpredis connection persistent"
+#define PHPIREDIS_READER_NAME "phpredis reader"
+
+static void php_redis_reader_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
+{
+    redisReader *reader = (redisReader *)rsrc->ptr;
+
+    if (reader) {
+        redisReplyReaderFree(reader);
+    }
+}
 
 static void php_redis_connection_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
@@ -72,12 +87,14 @@ static void php_redis_connection_persist(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 }
 
 
+int le_redis_reader_context;
 int le_redis_context;
 int le_redis_persistent_context;
 PHP_MINIT_FUNCTION(phpiredis)
 {
     le_redis_context = zend_register_list_destructors_ex(php_redis_connection_dtor, NULL, PHPIREDIS_CONNECTION_NAME, module_number);
     le_redis_persistent_context = zend_register_list_destructors_ex(NULL, php_redis_connection_persist, PHPIREDIS_PERSISTENT_CONNECTION_NAME, module_number);
+    le_redis_reader_context = zend_register_list_destructors_ex(php_redis_reader_dtor, NULL, PHPIREDIS_READER_NAME, module_number);
     return SUCCESS;
 }
 
@@ -137,6 +154,28 @@ PHP_FUNCTION(phpiredis_pconnect)
 
     efree(hashed_details);
     ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_persistent_context);
+}
+
+PHP_FUNCTION(phpiredis_reader_create)
+{
+	redisReader* reader = redisReplyReaderCreate();
+	ZEND_REGISTER_RESOURCE(return_value, reader, le_redis_reader_context);
+}
+
+PHP_FUNCTION(phpiredis_reader_destroy)
+{
+    zval *ptr;
+    redisReader *reader;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &ptr) == FAILURE) {
+        return;
+    }
+
+    ZEND_FETCH_RESOURCE(reader, redisReader *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
+
+    zend_list_delete(Z_LVAL_P(ptr));
+
+    RETURN_TRUE;
 }
 
 PHP_FUNCTION(phpiredis_connect)

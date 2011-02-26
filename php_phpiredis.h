@@ -13,6 +13,7 @@ PHP_FUNCTION(phpiredis_command);
 PHP_FUNCTION(phpiredis_multi_command);
 PHP_FUNCTION(phpiredis_format_command);
 PHP_FUNCTION(phpiredis_reader_create);
+PHP_FUNCTION(phpiredis_reader_reset);
 PHP_FUNCTION(phpiredis_reader_feed);
 PHP_FUNCTION(phpiredis_reader_get_state);
 PHP_FUNCTION(phpiredis_reader_get_error);

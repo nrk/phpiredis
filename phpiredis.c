@@ -19,6 +19,7 @@ static function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_multi_command, NULL)
     PHP_FE(phpiredis_format_command, NULL)
     PHP_FE(phpiredis_reader_create, NULL)
+    PHP_FE(phpiredis_reader_reset, NULL)
     PHP_FE(phpiredis_reader_feed, NULL)
     PHP_FE(phpiredis_reader_get_state, NULL)
     PHP_FE(phpiredis_reader_get_error, NULL)
@@ -174,6 +175,28 @@ PHP_FUNCTION(phpiredis_reader_create)
 	reader->bufferedReply = NULL;
 	ZEND_REGISTER_RESOURCE(return_value, reader, le_redis_reader_context);
 }
+
+PHP_FUNCTION(phpiredis_reader_reset)
+{
+    zval *ptr;
+    phpiredis_reader *reader;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &ptr) == FAILURE) {
+        return;
+    }
+
+    ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
+	if (reader->bufferedReply != NULL) {
+		freeReplyObject(reader->bufferedReply);
+		reader->bufferedReply = NULL;
+	}
+
+	if (reader->reader != NULL) {
+		redisReplyReaderFree(reader->reader);
+	}
+	reader->reader = redisReplyReaderCreate();
+}
+
 
 PHP_FUNCTION(phpiredis_reader_destroy)
 {

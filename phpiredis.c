@@ -20,7 +20,7 @@ static function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_format_command, NULL)
     PHP_FE(phpiredis_reader_create, NULL)
     PHP_FE(phpiredis_reader_feed, NULL)
-    //PHP_FE(phpiredis_reader_get_state, NULL)
+    PHP_FE(phpiredis_reader_get_state, NULL)
     PHP_FE(phpiredis_reader_get_reply, NULL)
     PHP_FE(phpiredis_reader_destroy, NULL)
     {NULL, NULL, NULL}
@@ -192,20 +192,6 @@ PHP_FUNCTION(phpiredis_reader_feed)
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
 
 	redisReplyReaderFeed(reader, bytes, size);
-	/*
-	redisReplyReaderFeed(reader,(char*)"+OK\r\n",5);
-char* test = malloc(sizeof(char) * (size+1));
-memcpy(test,bytes,size);
-test[size] = 0;
-printf("%s %d\n", test, size);
-free(test);
-
-	void* aux;
-	if (redisReplyReaderGetReply(reader, &aux) == REDIS_ERR)
-		printf("Error\n");
-	if (aux == NULL)
-		printf("null\n");
-		*/
 }
 
 PHP_FUNCTION(phpiredis_reader_get_reply)

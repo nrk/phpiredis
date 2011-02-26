@@ -1,5 +1,5 @@
 --TEST--
-phpiredis reconnect on disconnect
+phpiredis create and destroy reader
 --SKIPIF--
 <?php include 'skipif.inc'; ?>
 --FILE--

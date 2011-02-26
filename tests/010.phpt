@@ -1,5 +1,5 @@
 --TEST--
-phpiredis reconnect on disconnect
+phpiredis command formatting
 --SKIPIF--
 <?php include 'skipif.inc'; ?>
 --FILE--

@@ -21,6 +21,7 @@ static function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_reader_create, NULL)
     PHP_FE(phpiredis_reader_feed, NULL)
     PHP_FE(phpiredis_reader_get_state, NULL)
+    PHP_FE(phpiredis_reader_get_error, NULL)
     PHP_FE(phpiredis_reader_get_reply, NULL)
     PHP_FE(phpiredis_reader_destroy, NULL)
     {NULL, NULL, NULL}
@@ -53,11 +54,17 @@ ZEND_GET_MODULE(phpiredis)
 
 static void php_redis_reader_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
-    void *reader = (void *)rsrc->ptr;
+    phpiredis_reader *_reader = (void *)rsrc->ptr;
 
-    if (reader) {
-        redisReplyReaderFree(reader);
-    }
+	if (_reader) {
+		if (_reader->bufferedReply != NULL) {
+			freeReplyObject(_reader->bufferedReply);
+		}
+
+		if (_reader->reader != NULL) {
+			redisReplyReaderFree(_reader->reader);
+		}
+	}
 }
 
 static void php_redis_connection_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
@@ -158,7 +165,10 @@ PHP_FUNCTION(phpiredis_pconnect)
 
 PHP_FUNCTION(phpiredis_reader_create)
 {
-	void* reader = redisReplyReaderCreate();
+	phpiredis_reader* reader = emalloc(sizeof(phpiredis_reader));
+	reader->reader = redisReplyReaderCreate();
+	reader->error = NULL;
+	reader->bufferedReply = NULL;
 	ZEND_REGISTER_RESOURCE(return_value, reader, le_redis_reader_context);
 }
 
@@ -181,7 +191,7 @@ PHP_FUNCTION(phpiredis_reader_destroy)
 PHP_FUNCTION(phpiredis_reader_feed)
 {
     zval *ptr;
-    void *reader;
+    phpiredis_reader *reader;
 	char *bytes;
 	int size;
 
@@ -191,13 +201,30 @@ PHP_FUNCTION(phpiredis_reader_feed)
 
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
 
-	redisReplyReaderFeed(reader, bytes, size);
+	redisReplyReaderFeed(reader->reader, bytes, size);
+}
+
+PHP_FUNCTION(phpiredis_reader_get_error)
+{
+    zval *ptr;
+    phpiredis_reader *reader;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &ptr) == FAILURE) {
+        return;
+    }
+
+    ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
+
+	if (reader->error == NULL) {
+		RETURN_FALSE;
+	}
+	ZVAL_STRINGL(return_value, reader->error, strlen(reader->error), 1);
 }
 
 PHP_FUNCTION(phpiredis_reader_get_reply)
 {
     zval *ptr;
-    void *reader;
+    phpiredis_reader *reader;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &ptr) == FAILURE) {
         return;
@@ -206,13 +233,51 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
 
 	void* aux;
-	if (redisReplyReaderGetReply(reader, &aux) == REDIS_ERR)
-		RETURN_FALSE; // error
-	if (aux == NULL)
-		RETURN_FALSE; // incomplete
+	if (reader->bufferedReply) {
+		aux = reader->bufferedReply;
+		reader->bufferedReply = NULL;
+	} else {
+		if (redisReplyReaderGetReply(reader->reader, &aux) == REDIS_ERR) {
+			if (reader->error != NULL) free(reader->error);
+			reader->error = redisReplyReaderGetError(reader->reader);
+			RETURN_FALSE; // error
+		} else if (aux == NULL) {
+			RETURN_FALSE; // incomplete
+		}
 
-    convert_redis_to_php(return_value, aux);
+	}
+	convert_redis_to_php(return_value, aux);
     freeReplyObject(aux);
+}
+
+PHP_FUNCTION(phpiredis_reader_get_state)
+{
+    zval *ptr;
+    phpiredis_reader *reader;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &ptr) == FAILURE) {
+        return;
+    }
+
+    ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
+
+	if (reader->error == NULL && reader->bufferedReply == NULL) {
+		void *aux;
+		if (redisReplyReaderGetReply(reader->reader, &aux) == REDIS_ERR) {
+			if (reader->error != NULL) free(reader->error);
+			reader->error = redisReplyReaderGetError(reader->reader);
+		} else {
+			reader->bufferedReply = aux;
+		}
+	}
+
+	if (reader->error != NULL) {
+		RETURN_FALSE;
+	}
+
+	if (reader->bufferedReply != NULL) {
+		RETURN_TRUE;
+	}
 }
 
 PHP_FUNCTION(phpiredis_connect)

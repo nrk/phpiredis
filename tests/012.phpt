@@ -18,6 +18,7 @@ var_dump(phpiredis_reader_get_reply($reader));
 var_dump(phpiredis_reader_get_reply($reader));
 var_dump(phpiredis_reader_get_reply($reader));
 var_dump(phpiredis_reader_get_reply($reader));
+var_dump(phpiredis_reader_get_error($reader));
 ?>
 --EXPECTF--
 string(2) "OK"
@@ -34,4 +35,4 @@ array(3) {
   string(2) "AS"
 }
 bool(false)
-
+string(42) "Protocol error, got "n" as reply type byte"

@@ -15,6 +15,7 @@ PHP_FUNCTION(phpiredis_format_command);
 PHP_FUNCTION(phpiredis_reader_create);
 PHP_FUNCTION(phpiredis_reader_feed);
 PHP_FUNCTION(phpiredis_reader_get_state);
+PHP_FUNCTION(phpiredis_reader_get_error);
 PHP_FUNCTION(phpiredis_reader_get_reply);
 PHP_FUNCTION(phpiredis_reader_destroy);
 

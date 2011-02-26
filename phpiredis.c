@@ -102,6 +102,9 @@ PHP_MINIT_FUNCTION(phpiredis)
     le_redis_context = zend_register_list_destructors_ex(php_redis_connection_dtor, NULL, PHPIREDIS_CONNECTION_NAME, module_number);
     le_redis_persistent_context = zend_register_list_destructors_ex(NULL, php_redis_connection_persist, PHPIREDIS_PERSISTENT_CONNECTION_NAME, module_number);
     le_redis_reader_context = zend_register_list_destructors_ex(php_redis_reader_dtor, NULL, PHPIREDIS_READER_NAME, module_number);
+	REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_INCOMPLETE", PHPIREDIS_READER_STATE_INCOMPLETE, CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_COMPLETE", PHPIREDIS_READER_STATE_COMPLETE, CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_ERROR", PHPIREDIS_READER_STATE_ERROR, CONST_PERSISTENT|CONST_CS);
     return SUCCESS;
 }
 
@@ -272,11 +275,11 @@ PHP_FUNCTION(phpiredis_reader_get_state)
 	}
 
 	if (reader->error != NULL) {
-		RETURN_FALSE;
-	}
-
-	if (reader->bufferedReply != NULL) {
-		RETURN_TRUE;
+		ZVAL_LONG(return_value, PHPIREDIS_READER_STATE_ERROR);
+	} else if (reader->bufferedReply != NULL) {
+		ZVAL_LONG(return_value, PHPIREDIS_READER_STATE_COMPLETE);
+	} else {
+		ZVAL_LONG(return_value, PHPIREDIS_READER_STATE_INCOMPLETE);
 	}
 }
 

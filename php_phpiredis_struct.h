@@ -11,3 +11,7 @@ typedef struct _phpiredis_reader {
     void *bufferedReply;
     char* error;
 } phpiredis_reader;
+
+#define PHPIREDIS_READER_STATE_COMPLETE 1
+#define PHPIREDIS_READER_STATE_INCOMPLETE 2
+#define PHPIREDIS_READER_STATE_ERROR 3

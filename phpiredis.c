@@ -360,7 +360,10 @@ void convert_redis_to_php(zval* return_value, redisReply* reply) {
         case REDIS_REPLY_INTEGER:
             ZVAL_LONG(return_value, reply->integer);
             return;
+        case REDIS_REPLY_ERROR:
         case REDIS_REPLY_STATUS:
+			ZVAL_BOOL(return_value, strcmp(reply->str, "OK") == 0);
+			return;
         case REDIS_REPLY_STRING:
             ZVAL_STRINGL(return_value, reply->str, reply->len, 1);
             return;

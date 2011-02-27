@@ -477,6 +477,23 @@ PHP_FUNCTION(phpiredis_format_command)
         }
 
         switch ((*tmp)->type) {
+				case IS_LONG: {
+					char stmp[MAX_LENGTH_OF_LONG + 1];
+					elementslen[size] = slprintf(stmp, sizeof(stmp), "%ld", Z_LVAL_PP(tmp));
+					elements[size] = malloc(sizeof(char) * elementslen[size]);
+					memcpy(elements[size], stmp, elementslen[size]);
+				}    
+					break;
+
+				case IS_DOUBLE: {
+					char *stmp;
+					elementslen[size] = spprintf(&stmp, 0, "%.*G", (int) EG(precision), Z_DVAL_PP(tmp));
+					elements[size] = malloc(sizeof(char) * elementslen[size]);
+					memcpy(elements[size], stmp, elementslen[size]);
+					efree(stmp);
+				}
+					break;
+
                 case IS_STRING: {
                         elementslen[size] = (size_t) Z_STRLEN_PP(tmp);
                         elements[size] = malloc(sizeof(char) * elementslen[size]);

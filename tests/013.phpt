@@ -22,10 +22,10 @@ var_dump(phpiredis_reader_get_state($reader) == PHPIREDIS_READER_STATE_ERROR);
 var_dump(phpiredis_reader_get_error($reader));
 ?>
 --EXPECTF--
-string(2) "OK"
 bool(true)
 bool(true)
-string(2) "OK"
+bool(true)
+bool(true)
 bool(true)
 bool(true)
 string(3) "SET"

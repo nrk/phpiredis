@@ -19,6 +19,8 @@ PHP_FUNCTION(phpiredis_reader_get_state);
 PHP_FUNCTION(phpiredis_reader_get_error);
 PHP_FUNCTION(phpiredis_reader_get_reply);
 PHP_FUNCTION(phpiredis_reader_destroy);
+PHP_FUNCTION(phpiredis_reader_set_error_handler);
+PHP_FUNCTION(phpiredis_reader_set_status_handler);
 
 extern zend_module_entry phpiredis_module_entry;
 #define phpext_phpiredis_ptr &phpiredis_module_entry

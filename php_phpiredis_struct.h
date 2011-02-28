@@ -10,6 +10,8 @@ typedef struct _phpiredis_reader {
     void *reader;
     void *bufferedReply;
     char* error;
+    void* status_callback;
+    void* error_callback;
 } phpiredis_reader;
 
 #define PHPIREDIS_READER_STATE_COMPLETE 1

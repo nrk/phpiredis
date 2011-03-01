@@ -21,8 +21,8 @@ var_dump(phpiredis_reader_get_reply($reader));
 var_dump(phpiredis_reader_get_error($reader));
 ?>
 --EXPECTF--
-bool(true)
-bool(false)
+string(2) "OK"
+string(5) "Error"
 bool(false)
 int(123)
 string(3) "SET"

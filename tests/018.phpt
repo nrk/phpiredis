@@ -7,7 +7,7 @@ Set status handler
 function status_handler($err) { return ++$err; }
 $reader = phpiredis_reader_create();
 phpiredis_reader_feed($reader, "+OK\r\n");
-var_dump(phpiredis_reader_get_reply($reader) === TRUE);
+var_dump(phpiredis_reader_get_reply($reader) === 'OK');
 phpiredis_reader_set_status_handler($reader, 'status_handler');
 phpiredis_reader_feed($reader, "+OK\r\n");
 var_dump(phpiredis_reader_get_reply($reader) == 'OL');
@@ -16,7 +16,7 @@ phpiredis_reader_feed($reader, "+OK\r\n");
 var_dump(phpiredis_reader_get_reply($reader) == 'OL');
 var_dump(TRUE === phpiredis_reader_set_status_handler($reader, NULL));
 phpiredis_reader_feed($reader, "+OK\r\n");
-var_dump(phpiredis_reader_get_reply($reader) === TRUE);
+var_dump(phpiredis_reader_get_reply($reader) === 'OK');
 ?>
 --EXPECTF--
 bool(true)

@@ -121,6 +121,12 @@ PHP_MINIT_FUNCTION(phpiredis)
 	REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_INCOMPLETE", PHPIREDIS_READER_STATE_INCOMPLETE, CONST_PERSISTENT|CONST_CS);
 	REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_COMPLETE", PHPIREDIS_READER_STATE_COMPLETE, CONST_PERSISTENT|CONST_CS);
 	REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_ERROR", PHPIREDIS_READER_STATE_ERROR, CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_STRING", REDIS_REPLY_STRING, CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_ARRAY", REDIS_REPLY_ARRAY, CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_INTEGER", REDIS_REPLY_INTEGER, CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_NIL", REDIS_REPLY_NIL, CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_STATUS", REDIS_REPLY_STATUS, CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_ERROR", REDIS_REPLY_ERROR, CONST_PERSISTENT|CONST_CS);
     return SUCCESS;
 }
 
@@ -331,9 +337,10 @@ PHP_FUNCTION(phpiredis_reader_get_error)
 PHP_FUNCTION(phpiredis_reader_get_reply)
 {
     zval *ptr;
+    zval **type;
     phpiredis_reader *reader;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &ptr) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|Z", &ptr, &type) == FAILURE) {
         return;
     }
 
@@ -354,6 +361,10 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
 
 	}
 	convert_redis_to_php(reader, return_value, aux);
+    if (ZEND_NUM_ARGS() > 1) {
+        zval_dtor(*type);
+        ZVAL_LONG(*type, ((redisReply*)aux)->type);
+    }
     freeReplyObject(aux);
 }
 
@@ -456,8 +467,6 @@ static void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, r
 						zval_ptr_dtor(&arg[0]);
 						return;
 					}
-					ZVAL_BOOL(return_value, 0);
-					return;
 				} else if (reply->type == REDIS_REPLY_STATUS) {
 					if (reader->status_callback != NULL) {
 						zval *arg[1];
@@ -470,10 +479,10 @@ static void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, r
 						zval_ptr_dtor(&arg[0]);
 						return;
 					}
-					ZVAL_BOOL(return_value, 1);
-					return;
 				}
 			}
+			// NO BREAK! For status and error returning the string content
+
         case REDIS_REPLY_STRING:
             ZVAL_STRINGL(return_value, reply->str, reply->len, 1);
             return;

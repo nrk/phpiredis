@@ -24,3 +24,8 @@ modules
 run-tests.php
 *~
 phpiredis.loT
+tests/*.diff
+tests/*.exp
+tests/*.log
+tests/*.out
+tests/*.php

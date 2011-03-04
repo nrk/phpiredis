@@ -1,5 +1,5 @@
 --TEST--
-Set reader error handler
+Keep multibulk replies type
 --SKIPIF--
 <?php include 'skipif.inc'; ?>
 --FILE--

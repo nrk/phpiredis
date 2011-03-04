@@ -489,12 +489,11 @@ static void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, r
         case REDIS_REPLY_ARRAY:
             array_init(return_value);
             int j;
+            zval *val;
             for (j = 0; j < reply->elements; j++) {
-                if (reply->element[j]->type == REDIS_REPLY_NIL) {
-                    add_index_null(return_value, j);
-                } else {
-                    add_index_stringl(return_value, j, reply->element[j]->str, reply->element[j]->len, 1);
-                }
+		MAKE_STD_ZVAL(val);
+		convert_redis_to_php(reader, val, reply->element[j]);
+		add_index_zval(return_value, j, val);
             }
             return;
         case REDIS_REPLY_NIL:

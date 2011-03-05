@@ -514,6 +514,7 @@ PHP_FUNCTION(phpiredis_multi_command)
     zval **arg2;
     int commands;
     int i;
+    zval temp;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rZ", &resource, &arg2) == FAILURE) {
         return;
@@ -526,10 +527,14 @@ PHP_FUNCTION(phpiredis_multi_command)
 
     commands = 0;
     while (zend_hash_get_current_data_ex(Z_ARRVAL_P(arr), (void **) &tmp, &pos) == SUCCESS) {
-        convert_to_string(*tmp);
+        temp = **tmp;
+        zval_copy_ctor(&temp);
+        convert_to_string(&temp);
         ++commands;
-        redisAppendCommand(connection->c,Z_STRVAL_PP(tmp));
+        redisAppendCommand(connection->c,Z_STRVAL(temp));
         zend_hash_move_forward_ex(Z_ARRVAL_P(arr), &pos);
+        zval_dtor(&temp);
+
     }
 
     array_init(return_value);
@@ -561,6 +566,7 @@ PHP_FUNCTION(phpiredis_format_command)
     char **elements;
     size_t *elementslen;
     int elementstmpsize = 10;
+    zval temp;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Z", &arg) == FAILURE) {
         return;
@@ -579,10 +585,13 @@ PHP_FUNCTION(phpiredis_format_command)
             elementslen = (size_t *)realloc(elementslen, sizeof(int) * elementstmpsize);
         }
 
-        convert_to_string(*tmp);
-        elementslen[size] = (size_t) Z_STRLEN_PP(tmp);
+        temp = **tmp;
+        zval_copy_ctor(&temp);
+        convert_to_string(&temp);
+        elementslen[size] = (size_t) Z_STRLEN(temp);
         elements[size] = emalloc(sizeof(char) * elementslen[size]);
-        memcpy(elements[size], Z_STRVAL_PP(tmp), elementslen[size]);
+        memcpy(elements[size], Z_STRVAL(temp), elementslen[size]);
+        zval_dtor(&temp);
 
         zend_hash_move_forward_ex(Z_ARRVAL_P(arr), &pos);
         ++size;

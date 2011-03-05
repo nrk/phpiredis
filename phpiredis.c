@@ -526,28 +526,9 @@ PHP_FUNCTION(phpiredis_multi_command)
 
     commands = 0;
     while (zend_hash_get_current_data_ex(Z_ARRVAL_P(arr), (void **) &tmp, &pos) == SUCCESS) {
-        switch ((*tmp)->type) {
-                case IS_STRING:
-                        ++commands;
-                        redisAppendCommand(connection->c,Z_STRVAL_PP(tmp));
-                        break;
-
-                case IS_OBJECT: {
-                        ++commands;
-                        int copy;
-                        zval expr;
-                        zend_make_printable_zval(*tmp, &expr, &copy);
-                        redisAppendCommand(connection->c,Z_STRVAL(expr));
-                        if (copy) {
-                                zval_dtor(&expr);
-                        }
-                }
-                        break;
-
-                default:
-                        php_error_docref(NULL TSRMLS_CC, E_WARNING, "Array argument must contain strings");
-                        break;
-        }
+        convert_to_string(*tmp);
+        ++commands;
+	redisAppendCommand(connection->c,Z_STRVAL_PP(tmp));
         zend_hash_move_forward_ex(Z_ARRVAL_P(arr), &pos);
     }
 
@@ -598,50 +579,10 @@ PHP_FUNCTION(phpiredis_format_command)
             elementslen = (size_t *)realloc(elementslen, sizeof(int) * elementstmpsize);
         }
 
-        switch ((*tmp)->type) {
-				case IS_LONG: {
-					char stmp[MAX_LENGTH_OF_LONG + 1];
-					elementslen[size] = slprintf(stmp, sizeof(stmp), "%ld", Z_LVAL_PP(tmp));
-					elements[size] = emalloc(sizeof(char) * elementslen[size]);
-					memcpy(elements[size], stmp, elementslen[size]);
-				}    
-					break;
-
-				case IS_DOUBLE: {
-					char *stmp;
-					elementslen[size] = spprintf(&stmp, 0, "%.*G", (int) EG(precision), Z_DVAL_PP(tmp));
-					elements[size] = emalloc(sizeof(char) * elementslen[size]);
-					memcpy(elements[size], stmp, elementslen[size]);
-					efree(stmp);
-				}
-					break;
-
-                case IS_STRING: {
-                        elementslen[size] = (size_t) Z_STRLEN_PP(tmp);
-                        elements[size] = emalloc(sizeof(char) * elementslen[size]);
-                        memcpy(elements[size], Z_STRVAL_PP(tmp), elementslen[size]);
-                }
-                        break;
-
-                case IS_OBJECT: {
-                        int copy;
-                        zval expr;
-                        zend_make_printable_zval(*tmp, &expr, &copy);
-                        elementslen[size] = (size_t) Z_STRLEN(expr);
-                        elements[size] = emalloc(sizeof(char) * elementslen[size]);
-                        memcpy(elements[size], Z_STRVAL(expr), elementslen[size]);
-                        if (copy) {
-                                zval_dtor(&expr);
-                        }
-                }
-                        break;
-
-                default: {
-                        php_error_docref(NULL TSRMLS_CC, E_WARNING, "Array argument must contain strings");
-                        elementslen[size] = 0;
-                }
-                        break;
-        }
+        convert_to_string(*tmp);
+	elementslen[size] = (size_t) Z_STRLEN_PP(tmp);
+	elements[size] = emalloc(sizeof(char) * elementslen[size]);
+	memcpy(elements[size], Z_STRVAL_PP(tmp), elementslen[size]);
 
         zend_hash_move_forward_ex(Z_ARRVAL_P(arr), &pos);
         ++size;

@@ -1,4 +1,1 @@
-Error handling
-Binary safe multi command implementation
-Implement asyncronic api
-Add reconnection to all command methods
+Add types to multi-bulk response

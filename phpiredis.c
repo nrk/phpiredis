@@ -574,18 +574,16 @@ PHP_FUNCTION(phpiredis_format_command)
     zval         **tmp;
     HashPosition   pos;
     zval *arr;
-    zval **arg;
 
     int size = 0;
     char **elements;
     size_t *elementslen;
     int elementstmpsize = 10;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Z", &arg) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a", &arr) == FAILURE) {
         return;
     }
 
-    arr = *arg;
     zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(arr), &pos);
 
     elements = malloc(sizeof(char*) * elementstmpsize);
@@ -604,7 +602,7 @@ PHP_FUNCTION(phpiredis_format_command)
 					elementslen[size] = slprintf(stmp, sizeof(stmp), "%ld", Z_LVAL_PP(tmp));
 					elements[size] = malloc(sizeof(char) * elementslen[size]);
 					memcpy(elements[size], stmp, elementslen[size]);
-				}    
+				}
 					break;
 
 				case IS_DOUBLE: {

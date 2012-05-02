@@ -10,7 +10,7 @@
 #include "ext/standard/info.h"
 #include "php_phpiredis_struct.h"
 
-static function_entry phpiredis_functions[] = {
+static zend_function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_connect, NULL)
     PHP_FE(phpiredis_pconnect, NULL)
     PHP_FE(phpiredis_disconnect, NULL)

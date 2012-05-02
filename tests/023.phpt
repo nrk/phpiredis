@@ -1,10 +1,27 @@
 --TEST--
-phpiredis connect
+format parameters are not modified
 --SKIPIF--
 <?php include 'skipif.inc'; ?>
 --FILE--
 <?php
-phpiredis_format_command('SET a 1');
+$array = array('SET', 'key', 1);
+var_dump(phpiredis_format_command($array));
+var_dump($array);
 ?>
 --EXPECTF--
-Warning: phpiredis_format_command() expects parameter 1 to be array, string given in %s
+string(29) "*3
+$3
+SET
+$3
+key
+$1
+1
+"
+array(3) {
+  [0]=>
+  string(3) "SET"
+  [1]=>
+  string(3) "key"
+  [2]=>
+  int(1)
+}

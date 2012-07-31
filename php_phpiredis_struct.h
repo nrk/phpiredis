@@ -1,4 +1,4 @@
-#include "lib/hiredis/hiredis.h"
+#include "hiredis/hiredis.h"
 
 typedef struct _phpiredis_connection {
     redisContext *c;

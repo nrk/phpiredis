@@ -2,7 +2,7 @@
 #include "config.h"
 #endif
 
-#include "lib/hiredis/hiredis.h"
+#include "hiredis/hiredis.h"
 #include "php.h"
 #include "php_ini.h"
 #include "php_phpiredis.h"

@@ -18,7 +18,7 @@ if test "$PHP_PHPIREDIS" = "yes"; then
      done
      if test -z $HIREDIS_DIR; then
        AC_MSG_RESULT(not found)
-       AC_MSG_ERROR(Could not find hiredis in search pathts)
+       AC_MSG_ERROR(Could not find hiredis in search paths)
      fi
      AC_MSG_RESULT(Found hiredis in $HIREDIS_DIR)
      PHP_EVAL_LIBLINE(-lhiredis)

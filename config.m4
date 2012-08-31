@@ -21,7 +21,7 @@ if test "$PHP_PHPIREDIS" = "yes"; then
        AC_MSG_ERROR(Could not find hiredis in search paths)
      fi
      AC_MSG_RESULT(Found hiredis in $HIREDIS_DIR)
-     PHP_EVAL_LIBLINE(-lhiredis)
+     PHP_EVAL_LIBLINE(-lhiredis, PHPIREDIS_SHARED_LIBADD)
      PHP_EVAL_INCLINE(-I$HIREDIS_DIR/include)
   elif $PKG_CONFIG --exists hiredis; then
     HIREDIS_VERSION=`$PKG_CONFIG --modversion hiredis`

@@ -579,8 +579,8 @@ PHP_FUNCTION(phpiredis_format_command)
         if (size == elementstmpsize) {
             elementstmpsize *= 2;
             if (elementstmpsize == 0) elementstmpsize = 1;
-            elements = (char **)realloc(elements, sizeof(char*) * elementstmpsize);
-            elementslen = (size_t *)realloc(elementslen, sizeof(int) * elementstmpsize);
+            elements = (char **)erealloc(elements, sizeof(char*) * elementstmpsize);
+            elementslen = (size_t *)erealloc(elementslen, sizeof(int) * elementstmpsize);
         }
 
         temp = **tmp;

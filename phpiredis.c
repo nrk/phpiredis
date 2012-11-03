@@ -560,12 +560,14 @@ PHP_FUNCTION(phpiredis_format_command)
     zval         **tmp;
     HashPosition   pos;
     zval *arr;
+    zval temp;
 
-    int size = 0;
+    int size;
     char **elements;
     size_t *elementslen;
-    int elementstmpsize = 10;
-    zval temp;
+    int currpos = 0;
+    char *cmd;
+    int cmdlen;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a", &arr) == FAILURE) {
         return;
@@ -573,35 +575,29 @@ PHP_FUNCTION(phpiredis_format_command)
 
     zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(arr), &pos);
 
-    elements = emalloc(sizeof(char*) * elementstmpsize);
-    elementslen = emalloc(sizeof(int) * elementstmpsize);
-    while (zend_hash_get_current_data_ex(Z_ARRVAL_P(arr), (void **) &tmp, &pos) == SUCCESS) {
-        if (size == elementstmpsize) {
-            elementstmpsize *= 2;
-            if (elementstmpsize == 0) elementstmpsize = 1;
-            elements = (char **)erealloc(elements, sizeof(char*) * elementstmpsize);
-            elementslen = (size_t *)erealloc(elementslen, sizeof(int) * elementstmpsize);
-        }
+    size = zend_hash_num_elements(Z_ARRVAL_P(arr));
+    elements = emalloc(sizeof(char*) * size);
+    elementslen = emalloc(sizeof(size_t) * size);
 
+    while (zend_hash_get_current_data_ex(Z_ARRVAL_P(arr), (void **) &tmp, &pos) == SUCCESS) {
         temp = **tmp;
         zval_copy_ctor(&temp);
         convert_to_string(&temp);
-        elementslen[size] = (size_t) Z_STRLEN(temp);
-        elements[size] = emalloc(sizeof(char) * elementslen[size]);
-        memcpy(elements[size], Z_STRVAL(temp), elementslen[size]);
-        zval_dtor(&temp);
 
+        elementslen[currpos] = (size_t) Z_STRLEN(temp);
+        elements[currpos] = emalloc(sizeof(char) * elementslen[currpos]);
+        memcpy(elements[currpos], Z_STRVAL(temp), elementslen[currpos]);
+
+        zval_dtor(&temp);
         zend_hash_move_forward_ex(Z_ARRVAL_P(arr), &pos);
-        ++size;
+        ++currpos;
     }
 
-    char *cmd;
-    int len;
-    len = redisFormatCommandArgv(&cmd,size,elements,elementslen);
+    cmdlen = redisFormatCommandArgv(&cmd,size,elements,elementslen);
+    ZVAL_STRINGL(return_value, cmd, cmdlen, 1);
 
-    ZVAL_STRINGL(return_value, cmd, len, 1);
-    for (;size>0;--size)
-       efree(elements[size-1]);
+    for (;currpos>0;--currpos)
+       efree(elements[currpos-1]);
     efree(elements);
     efree(elementslen);
     free(cmd);

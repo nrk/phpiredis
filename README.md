@@ -1,7 +1,7 @@
 Installing
 ----------
 You need to have `libhiredis` pre-installed. You can fetch the latest version
-from https://github.com/antirez/hiredis.git.
+from https://github.com/redis/hiredis.
 
     git clone https://github.com/seppo0010/phpiredis.git
     cd phpiredis

@@ -17,6 +17,7 @@ static zend_function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_command, NULL)
     PHP_FE(phpiredis_command_bs, NULL)
     PHP_FE(phpiredis_multi_command, NULL)
+    PHP_FE(phpiredis_multi_command_bs, NULL)
     PHP_FE(phpiredis_format_command, NULL)
     PHP_FE(phpiredis_reader_create, NULL)
     PHP_FE(phpiredis_reader_reset, NULL)
@@ -535,6 +536,89 @@ PHP_FUNCTION(phpiredis_multi_command)
         zend_hash_move_forward_ex(Z_ARRVAL_P(arr), &pos);
         zval_dtor(&temp);
 
+    }
+
+    array_init(return_value);
+    for (i = 0; i < commands; ++i) {
+        zval* result;
+        MAKE_STD_ZVAL(result);
+        redisReply *reply;
+        if (redisGetReply(connection->c,&reply) != REDIS_OK)
+        {
+            for (; i < commands; ++i) {
+                add_index_bool(return_value, i, 0);
+            }
+            break;
+        }
+        convert_redis_to_php(NULL, result, reply);
+        add_index_zval(return_value, i, result);
+        freeReplyObject(reply);
+    }
+}
+
+PHP_FUNCTION(phpiredis_multi_command_bs)
+{
+    zval         **tmp;
+    zval         **tmpArg;
+    HashPosition   cmdsPos;
+    HashPosition   cmdArgsPos;
+    zval *resource;
+    redisReply *reply;
+    phpiredis_connection *connection;
+    zval *cmds;
+    zval cmdArgs;
+    zval cmdArg;
+
+    int cmdPos;
+    int cmdSize;
+    char **cmdElements;
+    size_t *cmdElementslen;
+
+    int commands;
+    int i;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ra", &resource, &cmds) == FAILURE) {
+        return;
+    }
+
+    ZEND_FETCH_RESOURCE2(connection, redisContext *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
+
+    commands = 0;
+    zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(cmds), &cmdsPos);
+    while (zend_hash_get_current_data_ex(Z_ARRVAL_P(cmds), (void **) &tmp, &cmdsPos) == SUCCESS) {
+        cmdArgs = **tmp;
+        zval_copy_ctor(&cmdArgs);
+
+        cmdPos = 0;
+        cmdSize = zend_hash_num_elements(Z_ARRVAL_P(&cmdArgs));
+        cmdElements = emalloc(sizeof(char*) * cmdSize);
+        cmdElementslen = emalloc(sizeof(size_t) * cmdSize);
+
+        zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(&cmdArgs), &cmdArgsPos);
+        while (zend_hash_get_current_data_ex(Z_ARRVAL_P(&cmdArgs), (void **) &tmpArg, &cmdArgsPos) == SUCCESS) {
+            cmdArg = **tmpArg;
+            zval_copy_ctor(&cmdArg);
+            convert_to_string(&cmdArg);
+
+            cmdElementslen[cmdPos] = (size_t) Z_STRLEN(cmdArg);
+            cmdElements[cmdPos] = emalloc(sizeof(char) * cmdElementslen[cmdPos]);
+            memcpy(cmdElements[cmdPos], Z_STRVAL(cmdArg), cmdElementslen[cmdPos]);
+
+            zval_dtor(&cmdArg);
+            zend_hash_move_forward_ex(Z_ARRVAL_P(&cmdArgs), &cmdArgsPos);
+            ++cmdPos;
+        }
+
+        redisAppendCommandArgv(connection->c, cmdSize, cmdElements, cmdElementslen);
+
+        for (;cmdPos>0;--cmdPos)
+           efree(cmdElements[cmdPos-1]);
+        efree(cmdElements);
+        efree(cmdElementslen);
+
+        zend_hash_move_forward_ex(Z_ARRVAL_P(cmds), &cmdsPos);
+        zval_dtor(&cmdArgs);
+        ++commands;
     }
 
     array_init(return_value);

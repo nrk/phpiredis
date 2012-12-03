@@ -46,11 +46,12 @@ Or even multiple commands with:
 
     phpiredis_multi_command($link, array('DEL test', 'SET test 1', 'GET test'));
 
-If you need a binary safe command you must use the following:
+If you need a binary safe commands you must use the `_bs` variants of `phpiredis_command`
+and `phpiredis_multi_command` by providing each command expressed as an array composed
+by its arguments:
 
     phpiredis_command_bs($link, array('DEL','test'));
-
-__Important:__ Note that each argument is an element in an array.
+    phpiredis_multi_command_bs($link, array(array('SET', 'test', '1'), array('GET', 'test')));
 
 Check the TODO to view the status.
 

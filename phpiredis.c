@@ -75,12 +75,16 @@ static void php_redis_reader_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
         }
 
         if (_reader->error_callback != NULL) {
+            efree(((callback*)_reader->error_callback)->function);
             efree(_reader->error_callback);
         }
 
         if (_reader->status_callback != NULL) {
+            efree(((callback*)_reader->status_callback)->function);
             efree(_reader->status_callback);
         }
+
+        efree(_reader);
     }
 }
 
@@ -223,6 +227,8 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
             RETURN_FALSE;
         }
 
+        efree(name);
+
         if (reader->error_callback == NULL) {
             reader->error_callback = emalloc(sizeof(callback));
         }
@@ -253,6 +259,8 @@ PHP_FUNCTION(phpiredis_reader_set_status_handler)
             efree(name);
             RETURN_FALSE;
         }
+
+        efree(name);
 
         if (reader->status_callback == NULL) {
             reader->status_callback = emalloc(sizeof(callback));
@@ -289,7 +297,7 @@ PHP_FUNCTION(phpiredis_reader_reset)
 PHP_FUNCTION(phpiredis_reader_destroy)
 {
     zval *ptr;
-    void *reader;
+    phpiredis_reader *reader;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &ptr) == FAILURE) {
         return;

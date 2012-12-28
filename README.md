@@ -3,7 +3,7 @@ Installing
 You need to have `libhiredis` pre-installed. You can fetch the latest version
 from https://github.com/redis/hiredis.
 
-    git clone https://github.com/seppo0010/phpiredis.git
+    git clone https://github.com/nrk/phpiredis.git
     cd phpiredis
 
 On some installs, you might need to install `php-dev`:
@@ -23,7 +23,7 @@ Run the tests and [create an issue][] on github if some of the tests fail.
 
     make test
 
-  [create an issue]: http://github.com/seppo0010/phpiredis/issues
+  [create an issue]: http://github.com/nrk/phpiredis/issues
 
 Usage
 -----

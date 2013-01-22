@@ -98,6 +98,7 @@ static void php_redis_connection_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
         {
             redisFree(connection->c);
         }
+        efree(connection);
     }
 }
 
@@ -111,6 +112,7 @@ static void php_redis_connection_persist(zend_rsrc_list_entry *rsrc TSRMLS_DC)
        {
            redisFree(connection->c);
        }
+       efree(connection);
     }
 }
 

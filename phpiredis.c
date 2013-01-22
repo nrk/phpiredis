@@ -98,6 +98,7 @@ static void php_redis_connection_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
         {
             redisFree(connection->c);
         }
+        efree(connection);
     }
 }
 
@@ -111,6 +112,7 @@ static void php_redis_connection_persist(zend_rsrc_list_entry *rsrc TSRMLS_DC)
        {
            redisFree(connection->c);
        }
+       efree(connection);
     }
 }
 
@@ -204,12 +206,29 @@ PHP_FUNCTION(phpiredis_reader_create)
     ZEND_REGISTER_RESOURCE(return_value, reader, le_redis_reader_context);
 }
 
+static void free_reader_status_callback(phpiredis_reader *reader TSRMLS_DC)
+{
+    if (reader->status_callback) {
+        efree(((callback*)reader->status_callback)->function);
+        efree(reader->status_callback);
+        reader->status_callback = NULL;
+    }
+}
+
+static void free_reader_error_callback(phpiredis_reader *reader TSRMLS_DC)
+{
+    if (reader->error_callback) {
+        efree(((callback*)reader->error_callback)->function);
+        efree(reader->error_callback);
+        reader->error_callback = NULL;
+    }
+}
+
 PHP_FUNCTION(phpiredis_reader_set_error_handler)
 {
     zval *ptr, **function;
     phpiredis_reader *reader;
     char *name;
-
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rZ", &ptr, &function) == FAILURE) {
         return;
@@ -218,8 +237,7 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
 
     if ((*function)->type == IS_NULL) {
-        efree(reader->error_callback);
-        reader->error_callback = NULL;
+        free_reader_error_callback(reader);
     } else {
         if (!zend_is_callable(*function, 0, &name TSRMLS_CC)) {
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Argument is not a valid callback");
@@ -228,10 +246,10 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
         }
 
         efree(name);
+        free_reader_error_callback(reader);
 
-        if (reader->error_callback == NULL) {
-            reader->error_callback = emalloc(sizeof(callback));
-        }
+        reader->error_callback = emalloc(sizeof(callback));
+
         Z_ADDREF_PP(function);
         ((callback*)reader->error_callback)->function = *function;
     }
@@ -251,8 +269,7 @@ PHP_FUNCTION(phpiredis_reader_set_status_handler)
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
 
     if ((*function)->type == IS_NULL) {
-        efree(reader->status_callback);
-        reader->status_callback = NULL;
+        free_reader_status_callback(reader);
     } else {
         if (!zend_is_callable(*function, 0, &name TSRMLS_CC)) {
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Argument is not a valid callback");
@@ -261,10 +278,10 @@ PHP_FUNCTION(phpiredis_reader_set_status_handler)
         }
 
         efree(name);
+        free_reader_status_callback(reader);
 
-        if (reader->status_callback == NULL) {
-            reader->status_callback = emalloc(sizeof(callback));
-        }
+        reader->status_callback = emalloc(sizeof(callback));
+
         Z_ADDREF_PP(function);
         ((callback*)reader->status_callback)->function = *function;
     }
@@ -556,6 +573,7 @@ PHP_FUNCTION(phpiredis_multi_command)
             for (; i < commands; ++i) {
                 add_index_bool(return_value, i, 0);
             }
+            efree(result);
             break;
         }
         convert_redis_to_php(NULL, result, reply);
@@ -639,6 +657,7 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
             for (; i < commands; ++i) {
                 add_index_bool(return_value, i, 0);
             }
+            efree(result);
             break;
         }
         convert_redis_to_php(NULL, result, reply);

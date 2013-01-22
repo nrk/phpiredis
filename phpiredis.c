@@ -558,6 +558,7 @@ PHP_FUNCTION(phpiredis_multi_command)
             for (; i < commands; ++i) {
                 add_index_bool(return_value, i, 0);
             }
+            efree(result);
             break;
         }
         convert_redis_to_php(NULL, result, reply);
@@ -641,6 +642,7 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
             for (; i < commands; ++i) {
                 add_index_bool(return_value, i, 0);
             }
+            efree(result);
             break;
         }
         convert_redis_to_php(NULL, result, reply);

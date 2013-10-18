@@ -12,12 +12,14 @@ if (!$link = my_phpiredis_connect($host))
         printf("[001] Cannot connect to the server using host=%s\n",
                 $host);
 
-ob_start();
-$im = imagecreate(200,200);
-imagecolorallocate($im,23,123,51);
-imagepng($im);
-$data = ob_get_contents();
-ob_end_clean();
+
+if (!@is_readable('/dev/urandom')) {
+    throw new Exception("Cannot read from /dev/urandom");
+}
+
+$resource = fopen('/dev/urandom', 'r');
+$data = fread($resource, 1024);
+fclose($resource);
 
 phpiredis_command_bs($link, array('DEL','test'));
 phpiredis_command_bs($link, array('SET','test', $data));

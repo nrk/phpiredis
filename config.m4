@@ -6,11 +6,12 @@ PHP_ARG_WITH(hiredis-dir, for hiredis library,
 
 if test "$PHP_PHPIREDIS" = "yes"; then
 
+
+  AC_MSG_CHECKING([for hiredis installation])
+
   #
   # Caller wants to check this path specifically
   #
-  AC_MSG_CHECKING([for hiredis installation])
-
   if test "x$PHP_HIREDIS_DIR" != "xno" && test "x$PHP_HIREDIS_DIR" != "xyes"; then
     if test -r "$PHP_HIREDIS_DIR/include/hiredis/hiredis.h"; then
       HIREDIS_DIR=$PHP_HIREDIS_DIR
@@ -28,6 +29,8 @@ if test "$PHP_PHPIREDIS" = "yes"; then
   if test "x$HIREDIS_DIR" = "x"; then
     AC_MSG_ERROR([not found])
   fi
+
+  AC_MSG_RESULT([found in $HIREDIS_DIR])
 
   PHP_ADD_LIBRARY_WITH_PATH(hiredis, [$HIREDIS_DIR/$PHP_LIBDIR], PHPIREDIS_SHARED_LIBADD)
   PHP_ADD_INCLUDE([$HIREDIS_DIR/include])

@@ -11,7 +11,7 @@ if test "$PHP_PHPIREDIS" = "yes"; then
   #
   AC_MSG_CHECKING([for hiredis installation])
 
-  if test "$PHP_HIREDIS_DIR" != "no" && test "$PHP_HIREDIS_DIR" != "yes"; then
+  if test "x$PHP_HIREDIS_DIR" != "xno" && test "x$PHP_HIREDIS_DIR" != "xyes"; then
     if test -r "$PHP_HIREDIS_DIR/include/hiredis/hiredis.h"; then
       HIREDIS_DIR=$PHP_HIREDIS_DIR
       break
@@ -19,7 +19,7 @@ if test "$PHP_PHPIREDIS" = "yes"; then
   else
     for i in /usr/local /usr /opt /opt/local; do
       if test -r "$i/include/hiredis/hiredis.h"; then
-        HIREDIS_DIR=$PHP_HIREDIS_DIR
+        HIREDIS_DIR=$i
         break
       fi
     done

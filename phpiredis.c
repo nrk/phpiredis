@@ -738,7 +738,7 @@ PHP_FUNCTION(phpiredis_command)
             connection->c = c;
         } else if (reply->type == REDIS_REPLY_ERROR) {
             if (connection->c == REDIS_OK) { // The problem was the command
-                php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str+4);
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
                 RETURN_FALSE;
                 return;
             } else {
@@ -820,7 +820,7 @@ PHP_FUNCTION(phpiredis_command_bs)
 
     if (reply->type == REDIS_REPLY_ERROR) {
         efree(params);
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str+4);
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str);
         RETURN_FALSE;
         return;
     }

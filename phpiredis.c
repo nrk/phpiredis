@@ -805,17 +805,21 @@ PHP_FUNCTION(phpiredis_command_bs)
     efree(argvlen);
 
     if (redisGetReply(connection->c,&reply) != REDIS_OK) {
-        efree(params);
+        freeReplyObject(reply);
+
         RETURN_FALSE;
         return;
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
-        efree(params);
         php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str);
+
+        freeReplyObject(reply);
+
         RETURN_FALSE;
         return;
     }
+
     convert_redis_to_php(NULL, return_value, reply);
     freeReplyObject(reply);
 }

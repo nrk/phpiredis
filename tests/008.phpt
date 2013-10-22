@@ -1,5 +1,5 @@
 --TEST--
-phpiredis reconnect on disconnect
+phpiredis does not reconnect on disconnect
 --SKIPIF--
 <?php include 'skipif.inc'; ?>
 --FILE--
@@ -20,4 +20,4 @@ var_dump(phpiredis_command($link, 'GET a'));
 --EXPECTF--
 string(1) "1"
 string(2) "OK"
-string(1) "1"
+bool(false)

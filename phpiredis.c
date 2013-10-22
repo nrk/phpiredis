@@ -722,30 +722,22 @@ PHP_FUNCTION(phpiredis_command)
 
     ZEND_FETCH_RESOURCE2(connection, phpiredis_connection *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
 
-    while (reply == NULL || reply->type == REDIS_REPLY_ERROR)
-    {
-        reply = redisCommand(connection->c,command);
-        if (reply == NULL) {
-            redisFree(connection->c);
-            redisContext* c = redisConnect(connection->ip, connection->port);
+    reply = redisCommand(connection->c, command);
 
-            if (c->err) {
-                redisFree(c);
-                connection->c = NULL;
-                RETURN_FALSE;
-                return;
-            }
-            connection->c = c;
-        } else if (reply->type == REDIS_REPLY_ERROR) {
-            if (connection->c == REDIS_OK) { // The problem was the command
-                php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
-                RETURN_FALSE;
-                return;
-            } else {
-                // TODO: whats happening here?
-            }
-        }
+    if (reply == NULL) {
+        RETURN_FALSE;
+        return;
     }
+
+    if (reply->type == REDIS_REPLY_ERROR) {
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
+
+        freeReplyObject(reply);
+
+        RETURN_FALSE;
+        return;
+    }
+
     convert_redis_to_php(NULL, return_value, reply);
     freeReplyObject(reply);
 }

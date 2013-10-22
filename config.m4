@@ -5,34 +5,37 @@ PHP_ARG_WITH(hiredis-dir, for hiredis library,
 [  --with-hiredis-dir[=DIR]   Set the path to hiredis install prefix.], yes)
 
 if test "$PHP_PHPIREDIS" = "yes"; then
-  AC_DEFINE(HAVE_PHPIREDIS, 1, [Whether you have phpiredis])
 
-  PKG_CONFIG=`which pkg-config`
 
-  if test "$PHP_HIREDIS_DIR" != "no" && test "$PHP_HIREDIS_DIR" != "yes"; then
-    for i in $PHP_HIREDIS_DIR /usr /usr/local; do
-      if test -r $i/include/$SEARCH_FOR; then
-        HIREDIS_DIR=$i
-       break
-      fi
-     done
-     if test -z $HIREDIS_DIR; then
-       AC_MSG_RESULT(not found)
-       AC_MSG_ERROR(Could not find hiredis in search paths)
-     fi
-     AC_MSG_RESULT(Found hiredis in $HIREDIS_DIR)
-     PHP_EVAL_LIBLINE(-lhiredis, PHPIREDIS_SHARED_LIBADD)
-     PHP_EVAL_INCLINE(-I$HIREDIS_DIR/include)
-  elif $PKG_CONFIG --exists hiredis; then
-    HIREDIS_VERSION=`$PKG_CONFIG --modversion hiredis`
-    AC_MSG_RESULT([Found hiredis $HIREDIS_VERSION])
-    PHP_EVAL_INCLINE(`$PKG_CONFIG --cflags-only-I hiredis`)
-    PHP_EVAL_LIBLINE(`$PKG_CONFIG --libs hiredis`, PHPIREDIS_SHARED_LIBADD)
+  AC_MSG_CHECKING([for hiredis installation])
+
+  #
+  # Caller wants to check this path specifically
+  #
+  if test "x$PHP_HIREDIS_DIR" != "xno" && test "x$PHP_HIREDIS_DIR" != "xyes"; then
+    if test -r "$PHP_HIREDIS_DIR/include/hiredis/hiredis.h"; then
+      HIREDIS_DIR=$PHP_HIREDIS_DIR
+      break
+    fi
   else
-    AC_MSG_RESULT(not found)
-    AC_MSG_ERROR(Ooops ! hiredis not found)
+    for i in /usr/local /usr /opt /opt/local; do
+      if test -r "$i/include/hiredis/hiredis.h"; then
+        HIREDIS_DIR=$i
+        break
+      fi
+    done
   fi
 
+  if test "x$HIREDIS_DIR" = "x"; then
+    AC_MSG_ERROR([not found])
+  fi
+
+  AC_MSG_RESULT([found in $HIREDIS_DIR])
+
+  PHP_ADD_LIBRARY_WITH_PATH(hiredis, [$HIREDIS_DIR/$PHP_LIBDIR], PHPIREDIS_SHARED_LIBADD)
+  PHP_ADD_INCLUDE([$HIREDIS_DIR/include])
+
+  AC_DEFINE(HAVE_PHPIREDIS, 1, [Whether you have phpiredis])
   PHP_SUBST(PHPIREDIS_SHARED_LIBADD)
   PHP_NEW_EXTENSION(phpiredis, phpiredis.c, $ext_shared)
 fi

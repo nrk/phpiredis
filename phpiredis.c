@@ -1,67 +1,24 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "hiredis/hiredis.h"
-#include "php.h"
-#include "php_ini.h"
 #include "php_phpiredis.h"
-#include "ext/standard/head.h"
-#include "ext/standard/info.h"
 #include "php_phpiredis_struct.h"
 
-static zend_function_entry phpiredis_functions[] = {
-    PHP_FE(phpiredis_connect, NULL)
-    PHP_FE(phpiredis_pconnect, NULL)
-    PHP_FE(phpiredis_disconnect, NULL)
-    PHP_FE(phpiredis_command, NULL)
-    PHP_FE(phpiredis_command_bs, NULL)
-    PHP_FE(phpiredis_multi_command, NULL)
-    PHP_FE(phpiredis_multi_command_bs, NULL)
-    PHP_FE(phpiredis_format_command, NULL)
-    PHP_FE(phpiredis_reader_create, NULL)
-    PHP_FE(phpiredis_reader_reset, NULL)
-    PHP_FE(phpiredis_reader_feed, NULL)
-    PHP_FE(phpiredis_reader_get_state, NULL)
-    PHP_FE(phpiredis_reader_get_error, NULL)
-    PHP_FE(phpiredis_reader_get_reply, NULL)
-    PHP_FE(phpiredis_reader_destroy, NULL)
-    PHP_FE(phpiredis_reader_set_error_handler, NULL)
-    PHP_FE(phpiredis_reader_set_status_handler, NULL)
-    {NULL, NULL, NULL}
-};
-
-zend_module_entry phpiredis_module_entry = {
-#if ZEND_MODULE_API_NO >= 20010901
-    STANDARD_MODULE_HEADER,
-#endif
-    PHP_PHPIREDIS_EXTNAME,
-    phpiredis_functions,
-    PHP_MINIT(phpiredis),
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-#if ZEND_MODULE_API_NO >= 20010901
-    PHP_PHPIREDIS_VERSION,
-#endif
-    STANDARD_MODULE_PROPERTIES
-};
-
-#ifdef COMPILE_DL_PHPIREDIS
-ZEND_GET_MODULE(phpiredis)
-#endif
+#include "ext/standard/head.h"
+#include "ext/standard/info.h"
 
 #define PHPIREDIS_CONNECTION_NAME "phpredis connection"
 #define PHPIREDIS_PERSISTENT_CONNECTION_NAME "phpredis connection persistent"
 #define PHPIREDIS_READER_NAME "phpredis reader"
 
-static
-void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, redisReply* reply);
+int le_redis_reader_context;
+int le_redis_context;
+int le_redis_persistent_context;
 
 typedef struct callback {
     zval *function;
 } callback;
+
+static
+void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, redisReply* reply);
 
 static
 void s_destroy_connection(phpiredis_connection *connection TSRMLS_DC)
@@ -108,29 +65,6 @@ void php_redis_reader_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 
         efree(_reader);
     }
-}
-
-int le_redis_reader_context;
-int le_redis_context;
-int le_redis_persistent_context;
-
-PHP_MINIT_FUNCTION(phpiredis)
-{
-    le_redis_context = zend_register_list_destructors_ex(php_redis_connection_dtor, NULL, PHPIREDIS_CONNECTION_NAME, module_number);
-    le_redis_persistent_context = zend_register_list_destructors_ex(NULL, php_redis_connection_dtor, PHPIREDIS_PERSISTENT_CONNECTION_NAME, module_number);
-    le_redis_reader_context = zend_register_list_destructors_ex(php_redis_reader_dtor, NULL, PHPIREDIS_READER_NAME, module_number);
-
-    REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_INCOMPLETE", PHPIREDIS_READER_STATE_INCOMPLETE, CONST_PERSISTENT|CONST_CS);
-    REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_COMPLETE", PHPIREDIS_READER_STATE_COMPLETE, CONST_PERSISTENT|CONST_CS);
-    REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_ERROR", PHPIREDIS_READER_STATE_ERROR, CONST_PERSISTENT|CONST_CS);
-    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_STRING", REDIS_REPLY_STRING, CONST_PERSISTENT|CONST_CS);
-    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_ARRAY", REDIS_REPLY_ARRAY, CONST_PERSISTENT|CONST_CS);
-    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_INTEGER", REDIS_REPLY_INTEGER, CONST_PERSISTENT|CONST_CS);
-    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_NIL", REDIS_REPLY_NIL, CONST_PERSISTENT|CONST_CS);
-    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_STATUS", REDIS_REPLY_STATUS, CONST_PERSISTENT|CONST_CS);
-    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_ERROR", REDIS_REPLY_ERROR, CONST_PERSISTENT|CONST_CS);
-
-    return SUCCESS;
 }
 
 static
@@ -870,3 +804,65 @@ PHP_FUNCTION(phpiredis_reader_get_state)
         ZVAL_LONG(return_value, PHPIREDIS_READER_STATE_INCOMPLETE);
     }
 }
+
+
+PHP_MINIT_FUNCTION(phpiredis)
+{
+    le_redis_context = zend_register_list_destructors_ex(php_redis_connection_dtor, NULL, PHPIREDIS_CONNECTION_NAME, module_number);
+    le_redis_persistent_context = zend_register_list_destructors_ex(NULL, php_redis_connection_dtor, PHPIREDIS_PERSISTENT_CONNECTION_NAME, module_number);
+    le_redis_reader_context = zend_register_list_destructors_ex(php_redis_reader_dtor, NULL, PHPIREDIS_READER_NAME, module_number);
+
+    REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_INCOMPLETE", PHPIREDIS_READER_STATE_INCOMPLETE, CONST_PERSISTENT|CONST_CS);
+    REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_COMPLETE", PHPIREDIS_READER_STATE_COMPLETE, CONST_PERSISTENT|CONST_CS);
+    REGISTER_LONG_CONSTANT("PHPIREDIS_READER_STATE_ERROR", PHPIREDIS_READER_STATE_ERROR, CONST_PERSISTENT|CONST_CS);
+    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_STRING", REDIS_REPLY_STRING, CONST_PERSISTENT|CONST_CS);
+    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_ARRAY", REDIS_REPLY_ARRAY, CONST_PERSISTENT|CONST_CS);
+    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_INTEGER", REDIS_REPLY_INTEGER, CONST_PERSISTENT|CONST_CS);
+    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_NIL", REDIS_REPLY_NIL, CONST_PERSISTENT|CONST_CS);
+    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_STATUS", REDIS_REPLY_STATUS, CONST_PERSISTENT|CONST_CS);
+    REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_ERROR", REDIS_REPLY_ERROR, CONST_PERSISTENT|CONST_CS);
+
+    return SUCCESS;
+}
+
+static zend_function_entry phpiredis_functions[] = {
+    PHP_FE(phpiredis_connect, NULL)
+    PHP_FE(phpiredis_pconnect, NULL)
+    PHP_FE(phpiredis_disconnect, NULL)
+    PHP_FE(phpiredis_command, NULL)
+    PHP_FE(phpiredis_command_bs, NULL)
+    PHP_FE(phpiredis_multi_command, NULL)
+    PHP_FE(phpiredis_multi_command_bs, NULL)
+    PHP_FE(phpiredis_format_command, NULL)
+    PHP_FE(phpiredis_reader_create, NULL)
+    PHP_FE(phpiredis_reader_reset, NULL)
+    PHP_FE(phpiredis_reader_feed, NULL)
+    PHP_FE(phpiredis_reader_get_state, NULL)
+    PHP_FE(phpiredis_reader_get_error, NULL)
+    PHP_FE(phpiredis_reader_get_reply, NULL)
+    PHP_FE(phpiredis_reader_destroy, NULL)
+    PHP_FE(phpiredis_reader_set_error_handler, NULL)
+    PHP_FE(phpiredis_reader_set_status_handler, NULL)
+    {NULL, NULL, NULL}
+};
+
+zend_module_entry phpiredis_module_entry = {
+#if ZEND_MODULE_API_NO >= 20010901
+    STANDARD_MODULE_HEADER,
+#endif
+    PHP_PHPIREDIS_EXTNAME,
+    phpiredis_functions,
+    PHP_MINIT(phpiredis),
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+#if ZEND_MODULE_API_NO >= 20010901
+    PHP_PHPIREDIS_VERSION,
+#endif
+    STANDARD_MODULE_PROPERTIES
+};
+
+#ifdef COMPILE_DL_PHPIREDIS
+ZEND_GET_MODULE(phpiredis)
+#endif

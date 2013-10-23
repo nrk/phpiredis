@@ -1,5 +1,12 @@
 #ifndef PHP_PHPIREDIS_H
-#define PHP_PHPIREDIS_H 1
+#define PHP_PHPIREDIS_H
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "php.h"
+#include "php_ini.h"
 
 #define PHP_PHPIREDIS_VERSION "1.0.0"
 #define PHP_PHPIREDIS_EXTNAME "phpiredis"

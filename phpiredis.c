@@ -75,7 +75,7 @@ phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool i
 
     c = redisConnect(ip, port);
 
-    if (!c) {
+    if (!c || c->err) {
         redisFree(c);
         return NULL;
     }

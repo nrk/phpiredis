@@ -1,7 +1,7 @@
 #ifndef PHP_PHPIREDIS_H
 #define PHP_PHPIREDIS_H 1
 
-#define PHP_PHPIREDIS_VERSION "1.0"
+#define PHP_PHPIREDIS_VERSION "1.0.0"
 #define PHP_PHPIREDIS_EXTNAME "phpiredis"
 
 PHP_MINIT_FUNCTION(phpiredis);

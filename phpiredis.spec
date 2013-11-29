@@ -2,7 +2,7 @@
 # To build an RPM, install rpm-utils, hiredis-devel, php-devel, etc.
 # Copy spec file to ~/rpmbuild/SPECS
 # cd ~/rpmbuild/SOURCES
-# wget -O phpiredis-master.zip https://github.com/nrk/phpiredis/archive/4404c86f4b556da26d4d15e3aa724b5b1c46b41a.zip
+# wget -O phpiredis-master.zip https://github.com/nrk/phpiredis/archive/1.0.0.zip
 # cd ~/rpmbuild/SPECS
 # rpmbuild -ba phpiredis.spec
 #
@@ -18,17 +18,17 @@
 %{!?__pecl:      %{expand: %%global __pecl      %{_bindir}/pecl}}
 
 %global pecl_name phpiredis
-%global gitrev    4404c8
-%global fullgitrev  4404c86f4b556da26d4d15e3aa724b5b1c46b41a
+%global gitrev    v1.0.0
+%global fullgitrev  v1.0.0
 
 Summary:       Phpiredis wraps the hiredis library in a PHP extension to provide: a very simple but efficient client library for Redis; and a fast incremental parser for the Redis protocol
 Name:          php-phpiredis
-Version:       0.0.1
-Release:       001_git_%{gitrev}_%{?dist}
+Version:       1.0.0
+Release:       01_git_%{gitrev}
 License:       PHP
 Group:         Development/Languages
 URL:           https://github.com/nrk/phpiredis
-# wget -O phpiredis-master.zip https://github.com/nrk/phpiredis/archive/4404c86f4b556da26d4d15e3aa724b5b1c46b41a.zip
+# wget -O phpiredis-master.zip https://github.com/nrk/phpiredis/archive/v1.0.0.zip
 # unzip phpiredis-master.zip
 Source0:       https://github.com/nrk/phpiredis/archive/phpiredis-master.zip
 Source1:       php-phpiredis.ini

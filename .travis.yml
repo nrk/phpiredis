@@ -1,0 +1,27 @@
+language: php
+
+php:
+    - 5.3
+    - 5.4
+    - 5.5
+
+services:
+  - redis-server
+
+env:
+    global:
+        - TEST_PHP_ARGS=-q
+
+install:
+    - |
+        git clone https://github.com/redis/hiredis.git \
+        && pushd hiredis \
+        && make \
+        && sudo make install \
+        && popd
+
+script:
+    - phpize
+    - ./configure --enable-phpiredis
+    - make
+    - make test

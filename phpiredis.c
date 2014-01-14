@@ -18,7 +18,7 @@ typedef struct callback {
 } callback;
 
 static
-void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, redisReply* reply);
+void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, redisReply* reply TSRMLS_DC);
 
 static
 void s_destroy_connection(phpiredis_connection *connection TSRMLS_DC)
@@ -225,7 +225,7 @@ PHP_FUNCTION(phpiredis_multi_command)
             break;
         }
 
-        convert_redis_to_php(NULL, result, reply);
+        convert_redis_to_php(NULL, result, reply TSRMLS_CC);
         add_index_zval(return_value, i, result);
         freeReplyObject(reply);
     }
@@ -313,7 +313,7 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
             break;
         }
 
-        convert_redis_to_php(NULL, result, reply);
+        convert_redis_to_php(NULL, result, reply TSRMLS_CC);
         add_index_zval(return_value, i, result);
         freeReplyObject(reply);
     }
@@ -348,7 +348,7 @@ PHP_FUNCTION(phpiredis_command)
         return;
     }
 
-    convert_redis_to_php(NULL, return_value, reply);
+    convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);
     freeReplyObject(reply);
 }
 
@@ -432,7 +432,7 @@ PHP_FUNCTION(phpiredis_command_bs)
         return;
     }
 
-    convert_redis_to_php(NULL, return_value, reply);
+    convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);
     freeReplyObject(reply);
 }
 
@@ -568,7 +568,7 @@ void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, redisRep
                 array_init(return_value);
                 for (j = 0; j < reply->elements; j++) {
                     MAKE_STD_ZVAL(val);
-                    convert_redis_to_php(reader, val, reply->element[j]);
+                    convert_redis_to_php(reader, val, reply->element[j] TSRMLS_CC);
                     add_index_zval(return_value, j, val);
                 }
             }
@@ -606,7 +606,7 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
 
     if ((*function)->type == IS_NULL) {
-        free_reader_error_callback(reader);
+        free_reader_error_callback(reader TSRMLS_CC);
     } else {
         if (!zend_is_callable(*function, 0, &name TSRMLS_CC)) {
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Argument is not a valid callback");
@@ -615,7 +615,7 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
         }
 
         efree(name);
-        free_reader_error_callback(reader);
+        free_reader_error_callback(reader TSRMLS_CC);
 
         reader->error_callback = emalloc(sizeof(callback));
 
@@ -639,7 +639,7 @@ PHP_FUNCTION(phpiredis_reader_set_status_handler)
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
 
     if ((*function)->type == IS_NULL) {
-        free_reader_status_callback(reader);
+        free_reader_status_callback(reader TSRMLS_CC);
     } else {
         if (!zend_is_callable(*function, 0, &name TSRMLS_CC)) {
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Argument is not a valid callback");
@@ -648,7 +648,7 @@ PHP_FUNCTION(phpiredis_reader_set_status_handler)
         }
 
         efree(name);
-        free_reader_status_callback(reader);
+        free_reader_status_callback(reader TSRMLS_CC);
 
         reader->status_callback = emalloc(sizeof(callback));
 
@@ -762,7 +762,7 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
 
     }
 
-    convert_redis_to_php(reader, return_value, aux);
+    convert_redis_to_php(reader, return_value, aux TSRMLS_CC);
 
     if (ZEND_NUM_ARGS() > 1) {
         zval_dtor(*type);

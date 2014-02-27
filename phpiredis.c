@@ -177,6 +177,41 @@ PHP_FUNCTION(phpiredis_disconnect)
     RETURN_TRUE;
 }
 
+PHP_FUNCTION(phpiredis_set_error_handler)
+{
+    zval *ptr, **function;
+    phpiredis_connection *connection;
+    char *name;
+    
+    // TODO: this code was copied from phpiredis_reader_set_error_handler, make it work for our case
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rZ", &ptr, &function) == FAILURE) {
+        return;
+    }
+
+    ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
+
+    if ((*function)->type == IS_NULL) {
+        free_reader_error_callback(reader TSRMLS_CC);
+    } else {
+        if (!zend_is_callable(*function, 0, &name TSRMLS_CC)) {
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Argument is not a valid callback");
+            efree(name);
+            RETURN_FALSE;
+        }
+
+        efree(name);
+        free_reader_error_callback(reader TSRMLS_CC);
+
+        reader->error_callback = emalloc(sizeof(callback));
+
+        Z_ADDREF_PP(function);
+        ((callback*) reader->error_callback)->function = *function;
+    }
+
+    RETURN_TRUE;
+}
+
 PHP_FUNCTION(phpiredis_multi_command)
 {
     zval **tmp;
@@ -824,6 +859,9 @@ PHP_MINIT_FUNCTION(phpiredis)
     REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_NIL", REDIS_REPLY_NIL, CONST_PERSISTENT|CONST_CS);
     REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_STATUS", REDIS_REPLY_STATUS, CONST_PERSISTENT|CONST_CS);
     REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_ERROR", REDIS_REPLY_ERROR, CONST_PERSISTENT|CONST_CS);
+    
+    REGISTER_LONG_CONSTANT("PHPIREDIS_ERROR_CONNECTION", PHPIREDIS_ERROR_CONNECTION, CONST_PERSISTENT|CONST_CS);
+    REGISTER_LONG_CONSTANT("PHPIREDIS_ERROR_PROTOCOL", PHPIREDIS_ERROR_PROTOCOL, CONST_PERSISTENT|CONST_CS);
 
     return SUCCESS;
 }
@@ -832,6 +870,7 @@ static zend_function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_connect, NULL)
     PHP_FE(phpiredis_pconnect, NULL)
     PHP_FE(phpiredis_disconnect, NULL)
+    PHP_FE(phpiredis_set_error_handler, NULL)
     PHP_FE(phpiredis_command, NULL)
     PHP_FE(phpiredis_command_bs, NULL)
     PHP_FE(phpiredis_multi_command, NULL)

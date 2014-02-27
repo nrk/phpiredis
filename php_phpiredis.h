@@ -11,10 +11,14 @@
 #define PHP_PHPIREDIS_VERSION "1.0.0"
 #define PHP_PHPIREDIS_EXTNAME "phpiredis"
 
+#define PHPIREDIS_ERROR_CONNECTION 1
+#define PHPIREDIS_ERROR_PROTOCOL 2
+
 PHP_MINIT_FUNCTION(phpiredis);
 PHP_FUNCTION(phpiredis_connect);
 PHP_FUNCTION(phpiredis_pconnect);
 PHP_FUNCTION(phpiredis_disconnect);
+PHP_FUNCTION(phpiredis_set_error_handler);
 PHP_FUNCTION(phpiredis_command_bs);
 PHP_FUNCTION(phpiredis_command);
 PHP_FUNCTION(phpiredis_multi_command);

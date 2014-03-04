@@ -4,8 +4,8 @@ typedef struct _phpiredis_connection {
     redisContext *c;
     char* ip;
     int port;
-	zend_bool is_persistent;
-	void* error_callback;
+    zend_bool is_persistent;
+    void* error_callback;
 } phpiredis_connection;
 
 typedef struct _phpiredis_reader {

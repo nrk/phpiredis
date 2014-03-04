@@ -21,12 +21,25 @@ static
 void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, redisReply* reply TSRMLS_DC);
 
 static
+void free_error_callback(phpiredis_connection *connection TSRMLS_DC)
+{
+    if (connection->error_callback) {
+        efree(((callback*) connection->error_callback)->function);
+        efree(connection->error_callback);
+        connection->error_callback = NULL;
+    }
+}
+
+static
 void s_destroy_connection(phpiredis_connection *connection TSRMLS_DC)
 {
     if (connection) {
         pefree(connection->ip, connection->is_persistent);
         if (connection->c != NULL) {
             redisFree(connection->c);
+        }
+        if (connection->error_callback != NULL) {
+            free_error_callback(connection);
         }
         pefree(connection, connection->is_persistent);
     }
@@ -117,16 +130,6 @@ int handle_error_callback(callback *cb, int type, redisReply *reply TSRMLS_DC) {
 
     // return SUCCESS to signal successful execution of the error handler
     return retval;
-}
-
-static
-void free_error_callback(phpiredis_connection *connection TSRMLS_DC)
-{
-    if (connection->error_callback) {
-        efree(((callback*) connection->error_callback)->function);
-        efree(connection->error_callback);
-        connection->error_callback = NULL;
-    }
 }
 
 PHP_FUNCTION(phpiredis_connect)
@@ -414,7 +417,7 @@ PHP_FUNCTION(phpiredis_command)
         // TODO: this indicates a connection error, call error handler here as well
         RETURN_FALSE;
     }
-    
+
     if (reply->type == REDIS_REPLY_ERROR) {
     	if (connection->error_callback != NULL) {
             handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_PROTOCOL, reply TSRMLS_CC);

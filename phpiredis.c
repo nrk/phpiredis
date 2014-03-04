@@ -384,7 +384,6 @@ PHP_FUNCTION(phpiredis_command)
 
     if (reply == NULL) {
         RETURN_FALSE;
-        return;
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
@@ -392,7 +391,6 @@ PHP_FUNCTION(phpiredis_command)
         freeReplyObject(reply);
 
         RETURN_FALSE;
-        return;
     }
 
     convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);
@@ -469,7 +467,6 @@ PHP_FUNCTION(phpiredis_command_bs)
         if (reply) freeReplyObject(reply);
 
         RETURN_FALSE;
-        return;
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
@@ -477,7 +474,6 @@ PHP_FUNCTION(phpiredis_command_bs)
         freeReplyObject(reply);
 
         RETURN_FALSE;
-        return;
     }
 
     convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);

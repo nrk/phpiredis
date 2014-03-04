@@ -90,6 +90,36 @@ phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool i
 }
 
 static
+int handle_error_callback(callback *cb, int type, redisReply *reply TSRMLS_DC) {
+    zval *arg[2];
+    zval *return_value;
+    int retval = SUCCESS;
+
+    MAKE_STD_ZVAL(arg[0]);
+    ZVAL_LONG(arg[0], type);
+    MAKE_STD_ZVAL(arg[1]);
+
+    if (reply != NULL) {
+        ZVAL_STRINGL(arg[1], reply->str, reply->len, 1);
+    }
+
+    MAKE_STD_ZVAL(return_value);
+
+    if (call_user_function(EG(function_table), NULL, cb->function, return_value, 2, arg TSRMLS_CC) == FAILURE) {
+        // return FAILURE to signal something went wrong with the error handler
+        retval = FAILURE;
+    }
+
+    // TODO: we could also return whatever the error handler returned to allow for more flexibility
+    zval_ptr_dtor(&return_value);
+    zval_ptr_dtor(&arg[0]);
+    zval_ptr_dtor(&arg[1]);
+
+    // return SUCCESS to signal successful execution of the error handler
+    return retval;
+}
+
+static
 void free_error_callback(phpiredis_connection *connection TSRMLS_DC)
 {
     if (connection->error_callback) {
@@ -381,25 +411,13 @@ PHP_FUNCTION(phpiredis_command)
     reply = redisCommand(connection->c, command);
 
     if (reply == NULL) {
+        // TODO: this indicates a connection error, call error handler here as well
         RETURN_FALSE;
     }
     
     if (reply->type == REDIS_REPLY_ERROR) {
     	if (connection->error_callback != NULL) {
-            zval *arg[2];
-
-			MAKE_STD_ZVAL(arg[0]);
-			ZVAL_LONG(arg[0], PHPIREDIS_ERROR_PROTOCOL);
-            MAKE_STD_ZVAL(arg[1]);
-            ZVAL_STRINGL(arg[1], reply->str, reply->len, 1);
-
-            if (call_user_function(EG(function_table), NULL, ((callback*) connection->error_callback)->function, return_value, 2, arg TSRMLS_CC) == FAILURE) {
-                zval_ptr_dtor(&return_value);
-                ZVAL_NULL(return_value);
-            }
-
-            zval_ptr_dtor(&arg[0]);
-            zval_ptr_dtor(&arg[1]);
+            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_PROTOCOL, reply TSRMLS_CC);
         } else {
         	// raise PHP error if no handler is set
         	php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
@@ -480,28 +498,20 @@ PHP_FUNCTION(phpiredis_command_bs)
     efree(argvlen);
 
     if (redisGetReply(connection->c, &reply) != REDIS_OK) {
+<<<<<<< HEAD
         // only free if the reply was actually created
         if (reply) freeReplyObject(reply);
+=======
+        // TODO: this indicates a connection error, call error handler here as well
+        freeReplyObject(reply);
+>>>>>>> refactored error handler calling code into separate function
 
         RETURN_FALSE;
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
         if (connection->error_callback != NULL) {
-            zval *arg[2];
-
-			MAKE_STD_ZVAL(arg[0]);
-			ZVAL_LONG(arg[0], PHPIREDIS_ERROR_PROTOCOL);
-            MAKE_STD_ZVAL(arg[1]);
-            ZVAL_STRINGL(arg[1], reply->str, reply->len, 1);
-
-            if (call_user_function(EG(function_table), NULL, ((callback*) connection->error_callback)->function, return_value, 2, arg TSRMLS_CC) == FAILURE) {
-                zval_ptr_dtor(&return_value);
-                ZVAL_NULL(return_value);
-            }
-
-            zval_ptr_dtor(&arg[0]);
-            zval_ptr_dtor(&arg[1]);
+            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_PROTOCOL, reply TSRMLS_CC);
         } else {
         	// raise PHP error if no handler is set
         	php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str);

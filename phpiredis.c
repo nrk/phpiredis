@@ -193,8 +193,6 @@ PHP_FUNCTION(phpiredis_set_error_handler)
     phpiredis_connection *connection;
     char *name;
     
-    // TODO: this code was copied from phpiredis_reader_set_error_handler, make it work for our case
-
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rZ", &ptr, &function) == FAILURE) {
         return;
     }

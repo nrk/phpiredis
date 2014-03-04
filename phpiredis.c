@@ -39,7 +39,7 @@ void s_destroy_connection(phpiredis_connection *connection TSRMLS_DC)
             redisFree(connection->c);
         }
         if (connection->error_callback != NULL) {
-            free_error_callback(connection);
+            free_error_callback(connection TSRMLS_CC);
         }
         pefree(connection, connection->is_persistent);
     }
@@ -93,11 +93,12 @@ phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool i
         return NULL;
     }
 
-    connection                = pemalloc(sizeof(phpiredis_connection), is_persistent);
-    connection->c             = c;
-    connection->ip            = pestrdup(ip, is_persistent);
-    connection->port          = port;
-    connection->is_persistent = is_persistent;
+    connection                 = pemalloc(sizeof(phpiredis_connection), is_persistent);
+    connection->c              = c;
+    connection->ip             = pestrdup(ip, is_persistent);
+    connection->port           = port;
+    connection->is_persistent  = is_persistent;
+    connection->error_callback = NULL;
 
     return connection;
 }

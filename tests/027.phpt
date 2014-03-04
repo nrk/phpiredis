@@ -18,7 +18,10 @@ $error_msg_signaled = '';
 $error_type_signaled = 0;
 
 // this error handler just sets the global variables
-$callback = function($msg, $type) use ($error_msg_signaled, $error_type_signaled) {
+$callback = function($type, $msg) {
+	printf("Error handler called!\n");
+	
+	global $error_type_signaled, $error_msg_signaled;
 	$error_msg_signaled = $msg;
 	$error_type_signaled = $type;
 };
@@ -47,11 +50,41 @@ if ($error_type_signaled != PHPIREDIS_ERROR_PROTOCOL) {
 	printf("Wrong error type returned, was %d, should have been %d\n", $error_type_signaled, PHPIREDIS_ERROR_PROTOCOL);
 }
 
+if (substr($error_msg_signaled, 0, 3) != 'ERR') {
+	printf("Wrong error message returned, was %s, should have started with %s\n", $error_msg_signaled, 'ERR');
+}
+
+// reset vars
+$error_msg_signaled = '';
+$error_type_signaled = 0;
+
+// test phpiredis_command_bs
+phpiredis_command_bs($link, array('DEL', 'test'));
+phpiredis_command_bs($link, array('SET', 'test', '1'));
+phpiredis_command_bs($link, array('LLEN', 'test'));
+
+$error_last = error_get_last();
+if ($error_last != null) {
+	printf("A php error was raised although a handler was set: %s\n", print_r($error_last, true));
+}
+
+if ($error_type_signaled != PHPIREDIS_ERROR_PROTOCOL) {
+	printf("Wrong error type returned, was %d, should have been %d\n", $error_type_signaled, PHPIREDIS_ERROR_PROTOCOL);
+}
+
+if (substr($error_msg_signaled, 0, 3) != 'ERR') {
+	printf("Wrong error message returned, was %s, should have started with %s\n", $error_msg_signaled, 'ERR');
+}
+
 // TODO: simulate a dead connection
 
 // TODO: remove error handler and check error was properly raised
 
+// TODO: test calling phpiredis_set_error_handler with an invalid argument
+
 echo "OK" . PHP_EOL;
 ?>
 --EXPECT--
+Error handler called!
+Error handler called!
 OK

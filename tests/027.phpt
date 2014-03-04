@@ -10,6 +10,10 @@ if (!defined('PHPIREDIS_ERROR_CONNECTION') || !defined('PHPIREDIS_ERROR_PROTOCOL
 	printf("Constants are not defined\n");
 }
 
+if (!function_exists('phpiredis_set_error_handler')) {
+	printf("Function is not defined\n");
+}
+
 $error_msg_signaled = '';
 $error_type_signaled = 0;
 
@@ -29,13 +33,23 @@ if (!phpiredis_set_error_handler($link, $callback)) {
 	printf("Error attaching error handler\n");
 }
 
-// TODO: do a faulty operation
+// do a faulty operation
+phpiredis_command($link, 'DEL test');
+phpiredis_command($link, 'SET test 1');
+phpiredis_command($link, 'LLEN test');
+
+$error_last = error_get_last();
+if ($error_last != null) {
+	printf("A php error was raised although a handler was set: %s\n", print_r($error_last, true));
+}
 
 if ($error_type_signaled != PHPIREDIS_ERROR_PROTOCOL) {
 	printf("Wrong error type returned, was %d, should have been %d\n", $error_type_signaled, PHPIREDIS_ERROR_PROTOCOL);
 }
 
 // TODO: simulate a dead connection
+
+// TODO: remove error handler and check error was properly raised
 
 echo "OK" . PHP_EOL;
 ?>

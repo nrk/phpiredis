@@ -383,9 +383,28 @@ PHP_FUNCTION(phpiredis_command)
     if (reply == NULL) {
         RETURN_FALSE;
     }
-
+    
     if (reply->type == REDIS_REPLY_ERROR) {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
+    	if (connection->error_callback != NULL) {
+            zval *arg[2];
+
+			MAKE_STD_ZVAL(arg[0]);
+			ZVAL_LONG(arg[0], PHPIREDIS_ERROR_PROTOCOL);
+            MAKE_STD_ZVAL(arg[1]);
+            ZVAL_STRINGL(arg[1], reply->str, reply->len, 1);
+
+            if (call_user_function(EG(function_table), NULL, ((callback*) connection->error_callback)->function, return_value, 2, arg TSRMLS_CC) == FAILURE) {
+                zval_ptr_dtor(&return_value);
+                ZVAL_NULL(return_value);
+            }
+
+            zval_ptr_dtor(&arg[0]);
+            zval_ptr_dtor(&arg[1]);
+        } else {
+        	// raise PHP error if no handler is set
+        	php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
+        }
+        
         freeReplyObject(reply);
 
         RETURN_FALSE;
@@ -468,7 +487,26 @@ PHP_FUNCTION(phpiredis_command_bs)
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str);
+        if (connection->error_callback != NULL) {
+            zval *arg[2];
+
+			MAKE_STD_ZVAL(arg[0]);
+			ZVAL_LONG(arg[0], PHPIREDIS_ERROR_PROTOCOL);
+            MAKE_STD_ZVAL(arg[1]);
+            ZVAL_STRINGL(arg[1], reply->str, reply->len, 1);
+
+            if (call_user_function(EG(function_table), NULL, ((callback*) connection->error_callback)->function, return_value, 2, arg TSRMLS_CC) == FAILURE) {
+                zval_ptr_dtor(&return_value);
+                ZVAL_NULL(return_value);
+            }
+
+            zval_ptr_dtor(&arg[0]);
+            zval_ptr_dtor(&arg[1]);
+        } else {
+        	// raise PHP error if no handler is set
+        	php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str);
+        }
+        
         freeReplyObject(reply);
 
         RETURN_FALSE;

@@ -89,6 +89,16 @@ phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool i
     return connection;
 }
 
+static
+void free_error_callback(phpiredis_connection *connection TSRMLS_DC)
+{
+    if (connection->error_callback) {
+        efree(((callback*) connection->error_callback)->function);
+        efree(connection->error_callback);
+        connection->error_callback = NULL;
+    }
+}
+
 PHP_FUNCTION(phpiredis_connect)
 {
     phpiredis_connection *connection;
@@ -189,10 +199,10 @@ PHP_FUNCTION(phpiredis_set_error_handler)
         return;
     }
 
-    ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
+    ZEND_FETCH_RESOURCE2(connection, phpiredis_connection *, &ptr, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
 
     if ((*function)->type == IS_NULL) {
-        free_reader_error_callback(reader TSRMLS_CC);
+        free_error_callback(connection TSRMLS_CC);
     } else {
         if (!zend_is_callable(*function, 0, &name TSRMLS_CC)) {
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Argument is not a valid callback");
@@ -201,12 +211,12 @@ PHP_FUNCTION(phpiredis_set_error_handler)
         }
 
         efree(name);
-        free_reader_error_callback(reader TSRMLS_CC);
+        free_error_callback(connection TSRMLS_CC);
 
-        reader->error_callback = emalloc(sizeof(callback));
+        connection->error_callback = emalloc(sizeof(callback));
 
         Z_ADDREF_PP(function);
-        ((callback*) reader->error_callback)->function = *function;
+        ((callback*) connection->error_callback)->function = *function;
     }
 
     RETURN_TRUE;

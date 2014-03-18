@@ -182,7 +182,6 @@ PHP_FUNCTION(phpiredis_multi_command)
     zval **tmp;
     HashPosition pos;
     zval *resource;
-    redisReply *reply;
     phpiredis_connection *connection;
     zval *arr;
     zval **arg2;
@@ -208,12 +207,11 @@ PHP_FUNCTION(phpiredis_multi_command)
         redisAppendCommand(connection->c, Z_STRVAL(temp));
         zend_hash_move_forward_ex(Z_ARRVAL_P(arr), &pos);
         zval_dtor(&temp);
-
     }
 
     array_init(return_value);
     for (i = 0; i < commands; ++i) {
-        redisReply *reply;
+        redisReply *reply = NULL;
         zval* result;
         MAKE_STD_ZVAL(result);
 
@@ -221,6 +219,9 @@ PHP_FUNCTION(phpiredis_multi_command)
             for (; i < commands; ++i) {
                 add_index_bool(return_value, i, 0);
             }
+
+            if (reply) freeReplyObject(reply);
+
             efree(result);
             break;
         }
@@ -238,7 +239,6 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
     HashPosition cmdsPos;
     HashPosition cmdArgsPos;
     zval *resource;
-    redisReply *reply;
     phpiredis_connection *connection;
     zval *cmds;
     zval cmdArgs;
@@ -300,15 +300,17 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
 
     array_init(return_value);
     for (i = 0; i < commands; ++i) {
-        redisReply *reply;
+        redisReply *reply = NULL;
         zval* result;
         MAKE_STD_ZVAL(result);
 
-        if (redisGetReply(connection->c, &reply) != REDIS_OK)
-        {
+        if (redisGetReply(connection->c, &reply) != REDIS_OK) {
             for (; i < commands; ++i) {
                 add_index_bool(return_value, i, 0);
             }
+
+            if (reply) freeReplyObject(reply);
+
             efree(result);
             break;
         }
@@ -355,7 +357,7 @@ PHP_FUNCTION(phpiredis_command)
 PHP_FUNCTION(phpiredis_command_bs)
 {
     zval *resource;
-    redisReply *reply;
+    redisReply *reply = NULL;
     phpiredis_connection *connection;
     zval *params;
     int argc;
@@ -418,7 +420,8 @@ PHP_FUNCTION(phpiredis_command_bs)
     efree(argvlen);
 
     if (redisGetReply(connection->c, &reply) != REDIS_OK) {
-        freeReplyObject(reply);
+        // only free if the reply was actually created
+        if (reply) freeReplyObject(reply);
 
         RETURN_FALSE;
         return;

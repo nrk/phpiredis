@@ -227,7 +227,7 @@ PHP_FUNCTION(phpiredis_set_error_handler)
     zval *ptr, **function;
     phpiredis_connection *connection;
     char *name;
-    
+
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rZ", &ptr, &function) == FAILURE) {
         return;
     }
@@ -416,7 +416,14 @@ PHP_FUNCTION(phpiredis_command)
     reply = redisCommand(connection->c, command);
 
     if (reply == NULL) {
-        // TODO: this indicates a connection error, call error handler here as well
+        if (connection->error_callback != NULL) {
+            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_CONNECTION,
+                    connection->c->errstr, strlen(connection->c->errstr) TSRMLS_CC);
+        } else {
+            // raise PHP error if no handler is set
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", connection->c->errstr);
+        }
+
         RETURN_FALSE;
     }
 
@@ -427,7 +434,7 @@ PHP_FUNCTION(phpiredis_command)
             // raise PHP error if no handler is set
             php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
         }
-        
+
         freeReplyObject(reply);
 
         RETURN_FALSE;
@@ -503,10 +510,16 @@ PHP_FUNCTION(phpiredis_command_bs)
     efree(argvlen);
 
     if (redisGetReply(connection->c, &reply) != REDIS_OK) {
+        if (connection->error_callback != NULL) {
+            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_CONNECTION,
+                    connection->c->errstr, strlen(connection->c->errstr) TSRMLS_CC);
+        } else {
+            // raise PHP error if no handler is set
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", connection->c->errstr);
+        }
+
         // only free if the reply was actually created
         if (reply) freeReplyObject(reply);
-        
-        // TODO: this indicates a connection error, call error handler here as well
 
         RETURN_FALSE;
     }
@@ -518,7 +531,7 @@ PHP_FUNCTION(phpiredis_command_bs)
             // raise PHP error if no handler is set
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str);
         }
-        
+
         freeReplyObject(reply);
 
         RETURN_FALSE;
@@ -912,7 +925,7 @@ PHP_MINIT_FUNCTION(phpiredis)
     REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_NIL", REDIS_REPLY_NIL, CONST_PERSISTENT|CONST_CS);
     REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_STATUS", REDIS_REPLY_STATUS, CONST_PERSISTENT|CONST_CS);
     REGISTER_LONG_CONSTANT("PHPIREDIS_REPLY_ERROR", REDIS_REPLY_ERROR, CONST_PERSISTENT|CONST_CS);
-    
+
     REGISTER_LONG_CONSTANT("PHPIREDIS_ERROR_CONNECTION", PHPIREDIS_ERROR_CONNECTION, CONST_PERSISTENT|CONST_CS);
     REGISTER_LONG_CONSTANT("PHPIREDIS_ERROR_PROTOCOL", PHPIREDIS_ERROR_PROTOCOL, CONST_PERSISTENT|CONST_CS);
 

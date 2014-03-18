@@ -104,7 +104,7 @@ phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool i
 }
 
 static
-int handle_error_callback(callback *cb, int type, redisReply *reply TSRMLS_DC) {
+int handle_error_callback(callback *cb, int type, char *msg, int len TSRMLS_DC) {
     zval *arg[2];
     zval *return_value;
     int retval = SUCCESS;
@@ -113,8 +113,9 @@ int handle_error_callback(callback *cb, int type, redisReply *reply TSRMLS_DC) {
     ZVAL_LONG(arg[0], type);
     MAKE_STD_ZVAL(arg[1]);
 
-    if (reply != NULL) {
-        ZVAL_STRINGL(arg[1], reply->str, reply->len, 1);
+    // only set second argument when msg is given
+    if (msg != NULL && len > 0) {
+        ZVAL_STRINGL(arg[1], msg, len, 1);
     }
 
     MAKE_STD_ZVAL(return_value);
@@ -420,11 +421,11 @@ PHP_FUNCTION(phpiredis_command)
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
-    	if (connection->error_callback != NULL) {
-            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_PROTOCOL, reply TSRMLS_CC);
+        if (connection->error_callback != NULL) {
+            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_PROTOCOL, reply->str, reply->len TSRMLS_CC);
         } else {
-        	// raise PHP error if no handler is set
-        	php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
+            // raise PHP error if no handler is set
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
         }
         
         freeReplyObject(reply);
@@ -512,10 +513,10 @@ PHP_FUNCTION(phpiredis_command_bs)
 
     if (reply->type == REDIS_REPLY_ERROR) {
         if (connection->error_callback != NULL) {
-            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_PROTOCOL, reply TSRMLS_CC);
+            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_PROTOCOL, reply->str, reply->len TSRMLS_CC);
         } else {
-        	// raise PHP error if no handler is set
-        	php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str);
+            // raise PHP error if no handler is set
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str);
         }
         
         freeReplyObject(reply);
@@ -850,7 +851,6 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
         } else if (aux == NULL) {
             RETURN_FALSE; // incomplete
         }
-
     }
 
     convert_redis_to_php(reader, return_value, aux TSRMLS_CC);

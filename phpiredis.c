@@ -208,7 +208,6 @@ PHP_FUNCTION(phpiredis_multi_command)
         redisAppendCommand(connection->c, Z_STRVAL(temp));
         zend_hash_move_forward_ex(Z_ARRVAL_P(arr), &pos);
         zval_dtor(&temp);
-
     }
 
     array_init(return_value);
@@ -304,8 +303,7 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
         zval* result;
         MAKE_STD_ZVAL(result);
 
-        if (redisGetReply(connection->c, &reply) != REDIS_OK)
-        {
+        if (redisGetReply(connection->c, &reply) != REDIS_OK) {
             for (; i < commands; ++i) {
                 add_index_bool(return_value, i, 0);
             }
@@ -337,15 +335,13 @@ PHP_FUNCTION(phpiredis_command)
 
     if (reply == NULL) {
         RETURN_FALSE;
-        return;
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str);
         freeReplyObject(reply);
 
         RETURN_FALSE;
-        return;
     }
 
     convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);
@@ -421,7 +417,6 @@ PHP_FUNCTION(phpiredis_command_bs)
         freeReplyObject(reply);
 
         RETURN_FALSE;
-        return;
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
@@ -429,7 +424,6 @@ PHP_FUNCTION(phpiredis_command_bs)
         freeReplyObject(reply);
 
         RETURN_FALSE;
-        return;
     }
 
     convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);
@@ -759,7 +753,6 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
         } else if (aux == NULL) {
             RETURN_FALSE; // incomplete
         }
-
     }
 
     convert_redis_to_php(reader, return_value, aux TSRMLS_CC);

@@ -502,13 +502,10 @@ PHP_FUNCTION(phpiredis_command_bs)
     efree(argvlen);
 
     if (redisGetReply(connection->c, &reply) != REDIS_OK) {
-<<<<<<< HEAD
         // only free if the reply was actually created
         if (reply) freeReplyObject(reply);
-=======
+        
         // TODO: this indicates a connection error, call error handler here as well
-        freeReplyObject(reply);
->>>>>>> refactored error handler calling code into separate function
 
         RETURN_FALSE;
     }

@@ -24,7 +24,8 @@ static
 void free_error_callback(phpiredis_connection *connection TSRMLS_DC)
 {
     if (connection->error_callback) {
-        efree(((callback*) connection->error_callback)->function);
+        // we must not free the function itself, because that deletes the actual PHP object
+        Z_DELREF_PP(&((callback*) connection->error_callback)->function);
         efree(connection->error_callback);
         connection->error_callback = NULL;
     }

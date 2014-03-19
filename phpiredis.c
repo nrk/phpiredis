@@ -355,7 +355,7 @@ PHP_FUNCTION(phpiredis_command)
 PHP_FUNCTION(phpiredis_command_bs)
 {
     zval *resource;
-    redisReply *reply;
+    redisReply *reply = NULL;
     phpiredis_connection *connection;
     zval *params;
     int argc;
@@ -418,10 +418,18 @@ PHP_FUNCTION(phpiredis_command_bs)
     efree(argvlen);
 
     if (redisGetReply(connection->c, &reply) != REDIS_OK) {
-        freeReplyObject(reply);
-
-        RETURN_FALSE;
-        return;
+	if (!reply) {
+	   	zend_throw_exception(zend_exception_get_default(TSRMLS_C), "No reply from server", 0 TSRMLS_CC);
+		reply = (redisReply*)malloc(sizeof(redisReply));
+		reply->type = REDIS_REPLY_ERROR;
+		reply->str = NULL;
+	//	Or could set a string but I think it is not very useful
+	//	reply->str = (char*)malloc(13);
+	//	strcpy(reply->str, "Server error");
+	} else {
+	    RETURN_FALSE;
+       	    return;
+	}
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {

@@ -100,8 +100,6 @@ if (strpos($error_last['message'], "Argument is not a valid callback") === false
 	printf("Last error message is not properly passed.\n");
 }
 
-// TODO: simulate a dead connection
-
 echo "OK" . PHP_EOL;
 ?>
 --EXPECT--

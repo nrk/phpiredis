@@ -57,10 +57,6 @@ if ($error_type_signaled != PHPIREDIS_ERROR_CONNECTION) {
 	printf("Wrong error type returned, was %d, should have been %d\n", $error_type_signaled, PHPIREDIS_ERROR_CONNECTION);
 }
 
-// reset vars
-$error_msg_signaled = '';
-$error_type_signaled = 0;
-
 // remove error handler and check error was properly raised
 phpiredis_set_error_handler($link, null);
 

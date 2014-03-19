@@ -304,10 +304,15 @@ PHP_FUNCTION(phpiredis_multi_command)
                 add_index_bool(return_value, i, 0);
             }
 
+            handle_error_callback(connection, PHPIREDIS_ERROR_CONNECTION, connection->c->errstr, strlen(connection->c->errstr) TSRMLS_CC);
             if (reply) freeReplyObject(reply);
 
-            efree(result);
+            zval_ptr_dtor(result);
             break;
+        }
+
+        if (reply->type == REDIS_REPLY_ERROR) {
+            handle_error_callback(connection, PHPIREDIS_ERROR_PROTOCOL, reply->str, reply->len TSRMLS_CC);
         }
 
         convert_redis_to_php(NULL, result, reply TSRMLS_CC);
@@ -393,10 +398,15 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
                 add_index_bool(return_value, i, 0);
             }
 
+            handle_error_callback(connection, PHPIREDIS_ERROR_CONNECTION, connection->c->errstr, strlen(connection->c->errstr) TSRMLS_CC);
             if (reply) freeReplyObject(reply);
 
-            efree(result);
+            zval_ptr_dtor(result);
             break;
+        }
+
+        if (reply->type == REDIS_REPLY_ERROR) {
+            handle_error_callback(connection, PHPIREDIS_ERROR_PROTOCOL, reply->str, reply->len TSRMLS_CC);
         }
 
         convert_redis_to_php(NULL, result, reply TSRMLS_CC);

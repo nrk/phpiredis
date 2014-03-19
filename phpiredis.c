@@ -104,7 +104,13 @@ phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool i
 }
 
 static
-int handle_error_callback(callback *cb, int type, char *msg, int len TSRMLS_DC) {
+int handle_error_callback(phpiredis_connection *connection, int type, char *msg, int len TSRMLS_DC) {
+    if (connection->error_callback == NULL) {
+        // raise PHP error if no handler is set
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", msg);
+        return SUCCESS;
+    }
+
     zval *arg[2];
     zval *return_value;
     int retval = SUCCESS;
@@ -120,7 +126,7 @@ int handle_error_callback(callback *cb, int type, char *msg, int len TSRMLS_DC) 
 
     MAKE_STD_ZVAL(return_value);
 
-    if (call_user_function(EG(function_table), NULL, cb->function, return_value, 2, arg TSRMLS_CC) == FAILURE) {
+    if (call_user_function(EG(function_table), NULL, ((callback*) connection->error_callback)->function, return_value, 2, arg TSRMLS_CC) == FAILURE) {
         // return FAILURE to signal something went wrong with the error handler
         retval = FAILURE;
     }
@@ -416,25 +422,13 @@ PHP_FUNCTION(phpiredis_command)
     reply = redisCommand(connection->c, command);
 
     if (reply == NULL) {
-        if (connection->error_callback != NULL) {
-            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_CONNECTION,
-                    connection->c->errstr, strlen(connection->c->errstr) TSRMLS_CC);
-        } else {
-            // raise PHP error if no handler is set
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", connection->c->errstr);
-        }
+        handle_error_callback(connection, PHPIREDIS_ERROR_CONNECTION, connection->c->errstr, strlen(connection->c->errstr) TSRMLS_CC);
 
         RETURN_FALSE;
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
-        if (connection->error_callback != NULL) {
-            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_PROTOCOL, reply->str, reply->len TSRMLS_CC);
-        } else {
-            // raise PHP error if no handler is set
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
-        }
-
+        handle_error_callback(connection, PHPIREDIS_ERROR_PROTOCOL, reply->str, reply->len TSRMLS_CC);
         freeReplyObject(reply);
 
         RETURN_FALSE;
@@ -510,14 +504,7 @@ PHP_FUNCTION(phpiredis_command_bs)
     efree(argvlen);
 
     if (redisGetReply(connection->c, &reply) != REDIS_OK) {
-        if (connection->error_callback != NULL) {
-            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_CONNECTION,
-                    connection->c->errstr, strlen(connection->c->errstr) TSRMLS_CC);
-        } else {
-            // raise PHP error if no handler is set
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", connection->c->errstr);
-        }
-
+        handle_error_callback(connection, PHPIREDIS_ERROR_CONNECTION, connection->c->errstr, strlen(connection->c->errstr) TSRMLS_CC);
         // only free if the reply was actually created
         if (reply) freeReplyObject(reply);
 
@@ -525,13 +512,7 @@ PHP_FUNCTION(phpiredis_command_bs)
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
-        if (connection->error_callback != NULL) {
-            handle_error_callback(connection->error_callback, PHPIREDIS_ERROR_PROTOCOL, reply->str, reply->len TSRMLS_CC);
-        } else {
-            // raise PHP error if no handler is set
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str);
-        }
-
+        handle_error_callback(connection, PHPIREDIS_ERROR_PROTOCOL, reply->str, reply->len TSRMLS_CC);
         freeReplyObject(reply);
 
         RETURN_FALSE;
@@ -786,7 +767,6 @@ PHP_FUNCTION(phpiredis_reader_reset)
 
     reader->reader = redisReplyReaderCreate();
 }
-
 
 PHP_FUNCTION(phpiredis_reader_destroy)
 {

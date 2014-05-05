@@ -50,8 +50,8 @@ if ($error_type_signaled != PHPIREDIS_ERROR_PROTOCOL) {
 	printf("Wrong error type returned, was %d, should have been %d\n", $error_type_signaled, PHPIREDIS_ERROR_PROTOCOL);
 }
 
-if (substr($error_msg_signaled, 0, 3) != 'ERR') {
-	printf("Wrong error message returned, was %s, should have started with %s\n", $error_msg_signaled, 'ERR');
+if (substr($error_msg_signaled, 0, 9) != 'WRONGTYPE') {
+	printf("Wrong error message returned, was %s, should have started with %s\n", $error_msg_signaled, 'WRONGTYPE');
 }
 
 // reset vars
@@ -70,8 +70,8 @@ if ($error_type_signaled != PHPIREDIS_ERROR_PROTOCOL) {
 	printf("Wrong error type returned, was %d, should have been %d\n", $error_type_signaled, PHPIREDIS_ERROR_PROTOCOL);
 }
 
-if (substr($error_msg_signaled, 0, 3) != 'ERR') {
-	printf("Wrong error message returned, was %s, should have started with %s\n", $error_msg_signaled, 'ERR');
+if (substr($error_msg_signaled, 0, 9) != 'WRONGTYPE') {
+	printf("Wrong error message returned, was %s, should have started with %s\n", $error_msg_signaled, 'WRONGTYPE');
 }
 
 // reset vars

@@ -39,9 +39,9 @@ $commands = array(
 $expected_result = array(
 	1,
 	'OK',
-	'ERR Operation against a key holding the wrong kind of value',
+	'WRONGTYPE Operation against a key holding the wrong kind of value',
 	2,
-	'ERR Operation against a key holding the wrong kind of value'
+	'WRONGTYPE Operation against a key holding the wrong kind of value'
 );
 
 $result = phpiredis_multi_command($link, $commands);
@@ -59,8 +59,8 @@ if ($error_type_signaled[0] != PHPIREDIS_ERROR_PROTOCOL) {
 	printf("Wrong error type returned, was %d, should have been %d\n", $error_type_signaled[0], PHPIREDIS_ERROR_PROTOCOL);
 }
 
-if (substr($error_msg_signaled[0], 0, 3) != 'ERR') {
-	printf("Wrong error message returned, was %s, should have started with %s\n", $error_msg_signaled[0], 'ERR');
+if (substr($error_msg_signaled[0], 0, 9) != 'WRONGTYPE') {
+	printf("Wrong error message returned, was %s, should have started with %s\n", $error_msg_signaled[0], 'WRONGTYPE');
 }
 
 if (array_diff_assoc($result, $expected_result) !== array()) {
@@ -92,8 +92,8 @@ if ($error_type_signaled[0] != PHPIREDIS_ERROR_PROTOCOL) {
 	printf("Wrong error type returned, was %d, should have been %d\n", $error_type_signaled[0], PHPIREDIS_ERROR_PROTOCOL);
 }
 
-if (substr($error_msg_signaled[0], 0, 3) != 'ERR') {
-	printf("Wrong error message returned, was %s, should have started with %s\n", $error_msg_signaled[0], 'ERR');
+if (substr($error_msg_signaled[0], 0, 9) != 'WRONGTYPE') {
+	printf("Wrong error message returned, was %s, should have started with %s\n", $error_msg_signaled[0], 'WRONGTYPE');
 }
 
 if (array_diff_assoc($result, $expected_result) !== array()) {

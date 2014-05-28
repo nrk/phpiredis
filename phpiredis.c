@@ -23,8 +23,11 @@ void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, redisRep
 static
 void free_error_callback(phpiredis_connection *connection TSRMLS_DC)
 {
+    // calling this function during shutdown leads to a segfault, because the error handler has already
+    // been deallocated by the runtime engine.
     if (connection->error_callback) {
-        // we must not free the function itself, because that deletes the actual PHP object
+        // we must not free the function itself, because that deletes the actual PHP object,
+        // so we only decrease the reference counter
         Z_DELREF_PP(&((callback*) connection->error_callback)->function);
         efree(connection->error_callback);
         connection->error_callback = NULL;
@@ -34,13 +37,13 @@ void free_error_callback(phpiredis_connection *connection TSRMLS_DC)
 static
 void s_destroy_connection(phpiredis_connection *connection TSRMLS_DC)
 {
+    // we explicitly don't free the error callback during shutdown, because it is usually already deallocated
+    // this may create a memory leak, but I don't know how to properly deallocate the structure and since
+    // we are shutting down anyway, it's only a problem on a principle level
     if (connection) {
         pefree(connection->ip, connection->is_persistent);
         if (connection->c != NULL) {
             redisFree(connection->c);
-        }
-        if (connection->error_callback != NULL) {
-            free_error_callback(connection TSRMLS_CC);
         }
         pefree(connection, connection->is_persistent);
     }

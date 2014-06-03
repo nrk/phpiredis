@@ -25,7 +25,7 @@ void free_error_callback(phpiredis_connection *connection TSRMLS_DC)
 {
     // calling this function during shutdown leads to a segfault, because the error handler has already
     // been deallocated by the runtime engine.
-    if (connection->error_callback) {
+    if (connection->error_callback != NULL) {
         // we must not free the function itself, because that deletes the actual PHP object,
         // so we only decrease the reference counter
         Z_DELREF_PP(&((callback*) connection->error_callback)->function);
@@ -188,6 +188,8 @@ PHP_FUNCTION(phpiredis_pconnect)
         }
 
         connection = (phpiredis_connection *) le->ptr;
+        // reset error handler, as it was cleaned up after the last request
+        connection->error_callback = NULL;
 
         ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_persistent_context);
         efree(hashed_details);
@@ -312,6 +314,7 @@ PHP_FUNCTION(phpiredis_multi_command)
             if (reply) freeReplyObject(reply);
 
             zval_ptr_dtor(result);
+
             break;
         }
 
@@ -519,6 +522,7 @@ PHP_FUNCTION(phpiredis_command_bs)
 
     if (redisGetReply(connection->c, &reply) != REDIS_OK) {
         handle_error_callback(connection, PHPIREDIS_ERROR_CONNECTION, connection->c->errstr, strlen(connection->c->errstr) TSRMLS_CC);
+
         // only free if the reply was actually created
         if (reply) freeReplyObject(reply);
 

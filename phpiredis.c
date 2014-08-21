@@ -26,8 +26,11 @@ void s_destroy_connection(phpiredis_connection *connection TSRMLS_DC)
     if (connection) {
         //if our IP is null, then we were initialized with a FD - don't close it.
         if (connection->ip == NULL) {
+            if (connection->reader != NULL) {
+                zend_list_delete(connection->reader_index);
+            }
             redisFreeKeepFd(connection->c);
-            zend_list_delete(connection->socket_index);
+            zend_list_delete(connection->stream_index);
         } else {
             pefree(connection->ip, connection->is_persistent);
             //if our IP is null, we did not create our context - don't free it.
@@ -811,17 +814,19 @@ PHP_FUNCTION(phpiredis_reader_get_state)
     }
 }
 
-PHP_FUNCTION(phpiredis_create_from_resource) {
-    zval *resource;
+PHP_FUNCTION(phpiredis_create_from_stream) {
+    zval *streamResource;
+    zval *readerResource;
     phpiredis_connection *connection;
     redisContext *context;
     php_stream *stream;
+    phpiredis_reader *reader;
     int fd = -1;
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &resource) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|r", &streamResource, &readerResource) == FAILURE) {
         RETURN_FALSE;
     }
 
-    php_stream_from_zval_no_verify(stream, &resource);
+    php_stream_from_zval_no_verify(stream, &streamResource);
     if (stream == NULL) { 
         RETURN_FALSE;
     }
@@ -838,9 +843,17 @@ PHP_FUNCTION(phpiredis_create_from_resource) {
     connection = pemalloc(sizeof(phpiredis_connection), 0);
     connection->c = context;
     connection->ip = NULL;
-    connection->socket_index = resource->value.lval;
+    connection->stream_index = streamResource->value.lval;
     connection->is_persistent = 0;
-    zend_list_addref(connection->socket_index);
+    connection->reader = NULL;
+    zend_list_addref(connection->stream_index);
+
+    if (ZEND_NUM_ARGS() > 1) {
+        connection->reader_index = readerResource->value.lval;
+        ZEND_FETCH_RESOURCE(reader, void *, &readerResource, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
+        connection->reader = reader;
+        zend_list_addref(connection->reader_index);
+    }
 
     ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_context);
 }
@@ -865,21 +878,20 @@ PHP_FUNCTION(phpiredis_read_reply) {
             goto err;
         }
     } while (reply == NULL);
-	
 
     if (reply == NULL) {
         RETURN_FALSE;
     }
-    if (reply->type == REDIS_REPLY_ERROR) {
-        error = reply->str;
-        freeReplyObject(reply);
-err:
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, error);
-        RETURN_FALSE;
-    }
 
-    convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);
+    convert_redis_to_php(connection->reader, return_value, reply TSRMLS_CC);
     freeReplyObject(reply);
+    return;
+err:
+    if (reply != NULL) {
+        freeReplyObject(reply);
+    }
+    php_error_docref(NULL TSRMLS_CC, E_WARNING, error);
+    RETURN_FALSE;
 }
 
 PHP_MINIT_FUNCTION(phpiredis)
@@ -920,7 +932,7 @@ static zend_function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_reader_set_error_handler, NULL)
     PHP_FE(phpiredis_reader_set_status_handler, NULL)
     PHP_FE(phpiredis_read_reply, NULL)
-    PHP_FE(phpiredis_create_from_resource, NULL)
+    PHP_FE(phpiredis_create_from_stream, NULL)
     {NULL, NULL, NULL}
 };
 

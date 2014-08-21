@@ -13,7 +13,7 @@
 
 PHP_MINIT_FUNCTION(phpiredis);
 PHP_FUNCTION(phpiredis_connect);
-PHP_FUNCTION(phpiredis_create_from_resource);
+PHP_FUNCTION(phpiredis_create_from_stream);
 PHP_FUNCTION(phpiredis_pconnect);
 PHP_FUNCTION(phpiredis_disconnect);
 PHP_FUNCTION(phpiredis_command_bs);

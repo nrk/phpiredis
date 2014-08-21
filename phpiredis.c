@@ -24,9 +24,16 @@ static
 void s_destroy_connection(phpiredis_connection *connection TSRMLS_DC)
 {
     if (connection) {
-        pefree(connection->ip, connection->is_persistent);
-        if (connection->c != NULL) {
-            redisFree(connection->c);
+        //if our IP is null, then we were initialized with a FD - don't close it.
+        if (connection->ip == NULL) {
+            redisFreeKeepFd(connection->c);
+            zend_list_delete(connection->socket_index);
+        } else {
+            pefree(connection->ip, connection->is_persistent);
+            //if our IP is null, we did not create our context - don't free it.
+            if (connection->c != NULL) {
+                redisFree(connection->c);
+            }
         }
         pefree(connection, connection->is_persistent);
     }
@@ -339,7 +346,6 @@ PHP_FUNCTION(phpiredis_command)
 
     if (reply == NULL) {
         RETURN_FALSE;
-        return;
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
@@ -347,7 +353,6 @@ PHP_FUNCTION(phpiredis_command)
         freeReplyObject(reply);
 
         RETURN_FALSE;
-        return;
     }
 
     convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);
@@ -424,7 +429,6 @@ PHP_FUNCTION(phpiredis_command_bs)
         if (reply) freeReplyObject(reply);
 
         RETURN_FALSE;
-        return;
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
@@ -432,7 +436,6 @@ PHP_FUNCTION(phpiredis_command_bs)
         freeReplyObject(reply);
 
         RETURN_FALSE;
-        return;
     }
 
     convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);
@@ -808,6 +811,76 @@ PHP_FUNCTION(phpiredis_reader_get_state)
     }
 }
 
+PHP_FUNCTION(phpiredis_create_from_resource) {
+    zval *resource;
+    phpiredis_connection *connection;
+    redisContext *context;
+    php_stream *stream;
+    int fd = -1;
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &resource) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    php_stream_from_zval_no_verify(stream, &resource);
+    if (stream == NULL) { 
+        RETURN_FALSE;
+    }
+
+    if (php_stream_cast(stream, PHP_STREAM_AS_FD | PHP_STREAM_CAST_INTERNAL,  (void*)&fd, 1) != SUCCESS || fd < 0) {
+        RETURN_FALSE;
+    }
+
+    context = redisConnectFd(fd);
+    if (!context) {
+        RETURN_FALSE;
+    }
+
+    connection = pemalloc(sizeof(phpiredis_connection), 0);
+    connection->c = context;
+    connection->ip = NULL;
+    connection->socket_index = resource->value.lval;
+    connection->is_persistent = 0;
+    zend_list_addref(connection->socket_index);
+
+    ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_context);
+}
+
+PHP_FUNCTION(phpiredis_read_reply) {
+    zval *resource;
+    redisReply *reply = NULL;
+    phpiredis_connection *connection;
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &resource) == FAILURE) {
+        return;
+    }
+    ZEND_FETCH_RESOURCE2(connection, phpiredis_connection *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
+
+    char *error;
+    do {
+        if (redisBufferRead(connection->c) == REDIS_ERR) {
+            error = connection->c->errstr;
+            goto err;
+        }
+        if (redisGetReplyFromReader(connection->c,&reply) == REDIS_ERR) {
+            error = connection->c->errstr;
+            goto err;
+        }
+    } while (reply == NULL);
+	
+
+    if (reply == NULL) {
+        RETURN_FALSE;
+    }
+    if (reply->type == REDIS_REPLY_ERROR) {
+        error = reply->str;
+        freeReplyObject(reply);
+err:
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, error);
+        RETURN_FALSE;
+    }
+
+    convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);
+    freeReplyObject(reply);
+}
 
 PHP_MINIT_FUNCTION(phpiredis)
 {
@@ -846,6 +919,8 @@ static zend_function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_reader_destroy, NULL)
     PHP_FE(phpiredis_reader_set_error_handler, NULL)
     PHP_FE(phpiredis_reader_set_status_handler, NULL)
+    PHP_FE(phpiredis_read_reply, NULL)
+    PHP_FE(phpiredis_create_from_resource, NULL)
     {NULL, NULL, NULL}
 };
 

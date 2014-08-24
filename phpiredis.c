@@ -868,7 +868,13 @@ PHP_FUNCTION(phpiredis_read_reply) {
     ZEND_FETCH_RESOURCE2(connection, phpiredis_connection *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
 
     char *error;
-    do {
+    //check for a pre-fetched response before entering the loop below
+    //there's no reason to try to fill our buffer if we already have a response (e.g. from pipelining)
+    if (redisGetReplyFromReader(connection->c,&reply) == REDIS_ERR) {
+        error = connection->c->errstr;
+        goto err;
+    }
+    while (reply == NULL) {
         if (redisBufferRead(connection->c) == REDIS_ERR) {
             error = connection->c->errstr;
             goto err;
@@ -877,7 +883,7 @@ PHP_FUNCTION(phpiredis_read_reply) {
             error = connection->c->errstr;
             goto err;
         }
-    } while (reply == NULL);
+    }
 
     if (reply == NULL) {
         RETURN_FALSE;

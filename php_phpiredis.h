@@ -18,6 +18,7 @@ PHP_FUNCTION(phpiredis_pconnect);
 PHP_FUNCTION(phpiredis_disconnect);
 PHP_FUNCTION(phpiredis_command_bs);
 PHP_FUNCTION(phpiredis_command);
+PHP_FUNCTION(phpiredis_append_command);
 PHP_FUNCTION(phpiredis_multi_command);
 PHP_FUNCTION(phpiredis_multi_command_bs);
 PHP_FUNCTION(phpiredis_format_command);

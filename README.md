@@ -1,18 +1,15 @@
 Phpiredis
 =========
 
-Phpiredis wraps the [hiredis](https://github.com/redis/hiredis) library in a PHP extension to provide:
-
-  - a very simple but efficient client library for Redis.
-  - a fast incremental parser for the Redis protocol.
+Phpiredis is an extension for PHP that wraps [hiredis](https://github.com/redis/hiredis) to provide
+a very simple but efficient client library for Redis and a fast incremental parser for its protocol.
 
 Installation
 ------------
 
-Building and using phpiredis requires the `hiredis` library to be installed on your system. `hiredis`
-is usually available in the repositories of recent versions of the most used linux distributions,
-alternatively you can build it by yourself fetching the code from its
-[canonical repository ](https://github.com/redis/hiredis).
+Building and using phpiredis requires `hiredis` to be installed on your system. `hiredis` is usually
+available in the repositories of the most used Linux distributions, alternatively you can build it
+yourself fetching the code from its [canonical repository](https://github.com/redis/hiredis).
 
 ```sh
 git clone https://github.com/nrk/phpiredis.git
@@ -21,23 +18,22 @@ phpize && ./configure --enable-phpiredis
 make && make install
 ```
 
-If the configuration script cannot locate `hiredis` on your system, you can specify in which directory
-it can be found using the `--with-hiredis-dir=` parameter (e.g. `--with-hiredis-dir=/usr/local`).
+If the configuration script is unable to locate `hiredis` on your system, you can specify in which
+directory it can be found using `--with-hiredis-dir=` (e.g. `--with-hiredis-dir=/usr/local`).
 
 Phpiredis provides a basic test suite that can be launched with `make test`. Tests require a running
-instance of `redis-server` listening on `127.0.0.1:6379`, but please remember that you should __never__
-point to a Redis instance in production or holding data you are interested in because you could end up
-losing everything stored on it.
+instance of `redis-server` listening on `127.0.0.1:6379` but __make sure__ that your server does not
+hold data you are interested: you could end up losing everything stored on it!
 
-If you notice a failing test or a bug, please do not hesitate to file a bug on the
-[issue tracker](http://github.com/nrk/phpiredis/issues).
+If you notice a failing test or a bug, you can contribute by opening a pull request on GitHub or
+simply file a bug on our [issue tracker](http://github.com/nrk/phpiredis/issues).
 
 Usage
 -----
 
-Connecting to a redis server is as simple as calling the `phpiredis_connect()` function with a server
-address as the first parameter and, optionally, a port number when the server is listening to a different
-port than `6379` (the default one).
+Connecting to Redis is as simple as calling the `phpiredis_connect()` function with a server address
+as the first parameter and an optional port number when the server is listening to a different port
+than the default `6379`:
 
 ```php
 $redis = phpiredis_connect('127.0.0.1', 6379);      // normal connection
@@ -63,12 +59,12 @@ $response = phpiredis_multi_command_bs($redis, array(
 ));
 ```
 
-The `_bs` suffix of these functions indicates that they can handle binary key names or values as they
-use the unified Redis protocol available since Redis >= 1.2.
+The `_bs` suffix functions indicates that these functions can handle binary key names or values by
+using the unified Redis protocol available since Redis >= 1.2.
 
-Commands can still be sent using the old and deprecated inline protocol using `phpiredis_command()` and
-`phpiredis_multi_command()` (not the lack of the `_bs` suffix) but it's highly discouraged and these
-functions will most likely be removed in future versions of phpiredis:
+Commands can still be sent using the old and deprecated inline protocol using `phpiredis_command()`
+and `phpiredis_multi_command()` (note the lack of the `_bs` suffix) but it's highly discouraged and
+these functions will most likely be removed in future versions of phpiredis.
 
 ```php
 $response = phpiredis_command($redis, 'DEL test');
@@ -81,10 +77,11 @@ $response = phpiredis_multi_command($redis, array(
 
 Contributing
 ------------
-Contributions are extremely welcome! Just fork the project on GitHub, work on new features or bug fixes
-using feature branches and [open a pull-request](http://github.com/nrk/phpiredis/issues) with a description
-of the changes. If you are unsure about a proposal you can just open an issue to discuss it before writing
-actual code.
+
+Any kind of contribution is extremely welcome! Just fork the project on GitHub, work on new features
+or bug fixes using feature branches and [open pull-requests](http://github.com/nrk/phpiredis/issues)
+with concise but complete descriptions of your changes. If you are unsure about a proposal, you can
+just open an issue to discuss it before writing actual code.
 
 Authors
 -------

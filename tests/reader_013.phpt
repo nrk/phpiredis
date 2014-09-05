@@ -1,14 +1,18 @@
 --TEST--
-format parameters does not break on many arguments
+[READER] Parameters formatting should not break on many arguments
+
 --SKIPIF--
-<?php include 'skipif.inc'; ?>
+<?php
+require_once 'testsuite_skipif.inc';
+
 --FILE--
 <?php
 $array = array('MSET', 'key1', '1', 'key2', '2', 'key3', '3', 'key4', '4', 'key5', '5');
+
 var_dump(phpiredis_format_command($array));
 var_dump($array);
-?>
---EXPECTF--
+
+--EXPECT--
 string(100) "*11
 $4
 MSET

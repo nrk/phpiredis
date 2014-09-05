@@ -1,14 +1,18 @@
 --TEST--
-format parameters are not modified
+[READER] Parameters formatting should not modify input argument.
+
 --SKIPIF--
-<?php include 'skipif.inc'; ?>
+<?php
+require_once 'testsuite_skipif.inc';
+
 --FILE--
 <?php
 $array = array('SET', 'key', 1);
+
 var_dump(phpiredis_format_command($array));
 var_dump($array);
-?>
---EXPECTF--
+
+--EXPECT--
 string(29) "*3
 $3
 SET

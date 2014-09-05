@@ -1,13 +1,16 @@
 --TEST--
-phpiredis command formatting
+[SERIALIZER] Command serialization with non-string arguments
+
 --SKIPIF--
-<?php include 'skipif.inc'; ?>
+<?php
+require_once 'testsuite_skipif.inc';
+
 --FILE--
 <?php
 var_dump(phpiredis_format_command(array('SET', 'key', 112)));
 var_dump(phpiredis_format_command(array('SET', 'key', 1.2)));
-?>
---EXPECTF--
+
+--EXPECT--
 string(31) "*3
 $3
 SET

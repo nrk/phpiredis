@@ -18,11 +18,11 @@ if (!$link = my_phpiredis_connect($host)) {
     printf("[001] Cannot connect to the server using host=%s\n", $host);
 }
 
-if (!$link = my_phpiredis_connect($host, 0)) {
+if (!$link = my_phpiredis_connect($host, 9999)) {
     printf("[001] Cannot connect to the server using host=%s\n", $host);
 }
 
-if (!$link = my_phpiredis_connect($host, 0, true)) {
+if (!$link = my_phpiredis_connect($host, NULL, true)) {
     printf("[001] Cannot pconnect to the server using host=%s\n", $host);
 }
 

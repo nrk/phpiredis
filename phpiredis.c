@@ -73,10 +73,12 @@ phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool i
     redisContext *c;
     phpiredis_connection *connection;
 
-    if (ip[0] != '/' && port > 0) {
-        c = redisConnect(ip, port);
-    } else {
+    if (ip[0] == '/') {
+        // We simply ignore the value of "port" if the string value in "ip"
+        // starts with a slash character indicating a UNIX domain socket path.
         c = redisConnectUnix(ip);
+    } else {
+        c = redisConnect(ip, port);
     }
 
     if (!c || c->err) {

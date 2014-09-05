@@ -73,7 +73,11 @@ phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool i
     redisContext *c;
     phpiredis_connection *connection;
 
-    c = redisConnect(ip, port);
+    if (ip[0] != '/' && port > 0) {
+        c = redisConnect(ip, port);
+    } else {
+        c = redisConnectUnix(ip);
+    }
 
     if (!c || c->err) {
         redisFree(c);

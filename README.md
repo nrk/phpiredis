@@ -40,7 +40,15 @@ address as the first parameter and, optionally, a port number when the server is
 port than `6379` (the default one).
 
 ```php
-$redis = phpiredis_connect('127.0.0.1', 6379);
+$redis = phpiredis_connect('127.0.0.1', 6379);      // normal connection
+$redis = phpiredis_pconnect('127.0.0.1', 6379);     // persistent connection
+```
+
+Alternatively you can connect to redis using UNIX domain socket connections.
+
+```php
+$redis = phpiredis_connect('/tmp/redis.sock');      // normal connection
+$redis = phpiredis_pconnect('/tmp/redis.sock');     // persistent connection
 ```
 
 Once the connection is established, you can send commands to Redis using `phpiredis_command_bs()` or

@@ -132,14 +132,8 @@ void getCommandElements(zval *arr, char ***elements, size_t **elementslen, int *
 //this wrapper function shortcuts that when possible, to avoid un-necessary network polls
 static
 int phpiredisGetReply(phpiredis_connection *connection, redisReply **replyP) {
+    int result = REDIS_OK;
     redisReply *reply;
-    int result;
-    
-    /**
-    result = redisGetReply(connection->c, &reply);
-    *replyP = reply;
-    return result;
-    */
     
     if (redisGetReplyFromReader(connection->c, &reply) == REDIS_ERR) {
         return REDIS_ERR;

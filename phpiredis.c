@@ -132,8 +132,15 @@ void getCommandElements(zval *arr, char ***elements, size_t **elementslen, int *
 //this wrapper function shortcuts that when possible, to avoid un-necessary network polls
 static
 int phpiredisGetReply(phpiredis_connection *connection, redisReply **replyP) {
-    int result = REDIS_OK;
     redisReply *reply;
+    int result;
+    
+    /**
+    result = redisGetReply(connection->c, &reply);
+    *replyP = reply;
+    return result;
+    */
+    
     if (redisGetReplyFromReader(connection->c, &reply) == REDIS_ERR) {
         return REDIS_ERR;
     } else if (reply == NULL) {
@@ -226,15 +233,14 @@ PHP_FUNCTION(phpiredis_pconnect)
     ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_persistent_context);
 }
 
-PHP_FUNCTION(phpiredis_create_from_stream) {
+PHP_FUNCTION(phpiredis_import_stream) {
     zval *streamResource;
-    zval *readerResource;
     phpiredis_connection *connection;
     redisContext *context;
     php_stream *stream;
     phpiredis_reader *reader;
     int fd = -1;
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|r", &streamResource, &readerResource) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &streamResource) == FAILURE) {
         RETURN_FALSE;
     }
     
@@ -260,14 +266,25 @@ PHP_FUNCTION(phpiredis_create_from_stream) {
     connection->reader = NULL;
     zend_list_addref(connection->stream_index);
     
-    if (ZEND_NUM_ARGS() > 1) {
-        connection->reader_index = readerResource->value.lval;
-        ZEND_FETCH_RESOURCE(reader, void *, &readerResource, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
-        connection->reader = reader;
-        zend_list_addref(connection->reader_index);
-    }
-    
     ZEND_REGISTER_RESOURCE(return_value, connection, le_redis_context);
+}
+
+PHP_FUNCTION(phpiredis_set_reader) {
+    zval *connectionResource;
+    zval *readerResource;
+    phpiredis_connection *connection;
+    phpiredis_reader *reader;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rr", &connectionResource, &readerResource) == FAILURE) {
+        return;
+    }
+
+    ZEND_FETCH_RESOURCE(connection, void *, &connectionResource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context);
+    ZEND_FETCH_RESOURCE(reader, void *, &readerResource, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
+
+    connection->reader_index = readerResource->value.lval;
+    connection->reader = reader;
+    zend_list_addref(connection->reader_index);
 }
 
 PHP_FUNCTION(phpiredis_disconnect)
@@ -869,11 +886,11 @@ PHP_MINIT_FUNCTION(phpiredis)
 static zend_function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_connect, NULL)
     PHP_FE(phpiredis_pconnect, NULL)
-    PHP_FE(phpiredis_create_from_stream, NULL)
     PHP_FE(phpiredis_disconnect, NULL)
     PHP_FE(phpiredis_append_command, NULL)
     PHP_FE(phpiredis_command, NULL)
     PHP_FE(phpiredis_command_bs, NULL)
+    PHP_FE(phpiredis_import_stream, NULL)
     PHP_FE(phpiredis_multi_command, NULL)
     PHP_FE(phpiredis_multi_command_bs, NULL)
     PHP_FE(phpiredis_format_command, NULL)
@@ -887,6 +904,7 @@ static zend_function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_reader_set_error_handler, NULL)
     PHP_FE(phpiredis_reader_set_status_handler, NULL)
     PHP_FE(phpiredis_read_reply, NULL)
+    PHP_FE(phpiredis_set_reader, NULL)
     {NULL, NULL, NULL}
 };
 

@@ -15,7 +15,7 @@ if (!$stream) {
         echo 'Failed to connect to host';
 }
 
-$link = phpiredis_create_from_stream($stream);
+$link = phpiredis_import_stream($stream);
 
 phpiredis_append_command($link, array('del', 'a'));
 phpiredis_append_command($link, array('set', 'a', 'b'));

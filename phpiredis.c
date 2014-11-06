@@ -76,7 +76,15 @@ phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool i
     if (ip[0] == '/') {
         // We simply ignore the value of "port" if the string value in "ip"
         // starts with a slash character indicating a UNIX domain socket path.
-        c = redisConnectUnix(ip);
+        if (timeout) {
+            // timeout is in millisecond
+            int timeout_sec = timeout/1000;
+            int timeout_usec = (timeout%1000)*1000;
+            struct timeval tv = { timeout_sec, timeout_usec };
+            c = redisConnectUnixWithTimeout(ip, tv);
+        } else {
+            c = redisConnectUnix(ip);
+        }
     } else {
         if (timeout) {
             // timeout is in millisecond

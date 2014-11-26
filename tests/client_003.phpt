@@ -16,6 +16,7 @@ require_once 'testsuite_utilities.inc';
 create_phpiredis_connection(REDIS_UNIX_SOCKET, 9999);
 create_phpiredis_connection(REDIS_UNIX_SOCKET, NULL);
 create_phpiredis_connection(REDIS_UNIX_SOCKET, NULL, TRUE);
+create_phpiredis_connection(REDIS_UNIX_SOCKET, NULL, TRUE, 1000);
 
 echo "OK" . PHP_EOL;
 

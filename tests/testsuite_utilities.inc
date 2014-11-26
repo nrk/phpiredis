@@ -3,13 +3,21 @@
 require_once 'testsuite_configuration.inc';
 
 if (!function_exists('create_phpiredis_connection')) {
-    function create_phpiredis_connection($host, $port = 6379, $persistent = false) {
+    function create_phpiredis_connection($host, $port = 6379, $persistent = false, $timeout = false) {
         global $connect_flags;
 
         if ($persistent) {
-            $link = phpiredis_pconnect($host, $port);
+            if ($timeout) {
+                $link = phpiredis_pconnect($host, $port, $timeout);
+            } else {
+                $link = phpiredis_pconnect($host, $port);
+            }
         } else {
-            $link = phpiredis_connect($host, $port);
+            if ($timeout) {
+                $link = phpiredis_connect($host, $port, $timeout);
+            } else {
+                $link = phpiredis_connect($host, $port);
+            }
         }
 
         if (!$link) {

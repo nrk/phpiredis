@@ -68,7 +68,7 @@ void php_redis_reader_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 }
 
 static
-phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool is_persistent)
+phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool is_persistent, int timeout)
 {
     redisContext *c;
     phpiredis_connection *connection;
@@ -76,9 +76,25 @@ phpiredis_connection *s_create_connection (const char *ip, int port, zend_bool i
     if (ip[0] == '/') {
         // We simply ignore the value of "port" if the string value in "ip"
         // starts with a slash character indicating a UNIX domain socket path.
-        c = redisConnectUnix(ip);
+        if (timeout) {
+            // timeout is in millisecond
+            int timeout_sec = timeout/1000;
+            int timeout_usec = (timeout%1000)*1000;
+            struct timeval tv = { timeout_sec, timeout_usec };
+            c = redisConnectUnixWithTimeout(ip, tv);
+        } else {
+            c = redisConnectUnix(ip);
+        }
     } else {
-        c = redisConnect(ip, port);
+        if (timeout) {
+            // timeout is in millisecond
+            int timeout_sec = timeout/1000;
+            int timeout_usec = (timeout%1000)*1000;
+            struct timeval tv = { timeout_sec, timeout_usec };
+            c = redisConnectWithTimeout(ip, port, tv);
+        } else {
+            c = redisConnect(ip, port);
+        }
     }
 
     if (!c || c->err) {
@@ -101,12 +117,13 @@ PHP_FUNCTION(phpiredis_connect)
     char *ip;
     int ip_size;
     long port = 6379;
+    long timeout = 0;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &ip, &ip_size, &port) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|ll", &ip, &ip_size, &port, &timeout) == FAILURE) {
         return;
     }
 
-    connection = s_create_connection(ip, port, 0);
+    connection = s_create_connection(ip, port, 0, timeout);
 
     if (!connection) {
         RETURN_FALSE;
@@ -120,6 +137,7 @@ PHP_FUNCTION(phpiredis_pconnect)
     char *ip;
     int ip_size;
     long port = 6379;
+    long timeout = 0;
 
     char *hashed_details = NULL;
     int hashed_details_length;
@@ -127,7 +145,7 @@ PHP_FUNCTION(phpiredis_pconnect)
 
     zend_rsrc_list_entry new_le, *le;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &ip, &ip_size, &port) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|ll", &ip, &ip_size, &port, &timeout) == FAILURE) {
         return;
     }
 
@@ -146,7 +164,7 @@ PHP_FUNCTION(phpiredis_pconnect)
         return;
     }
 
-    connection = s_create_connection(ip, port, 1);
+    connection = s_create_connection(ip, port, 1, timeout);
 
     if (!connection) {
         efree(hashed_details);

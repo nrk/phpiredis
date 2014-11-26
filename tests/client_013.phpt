@@ -9,7 +9,7 @@ require_once 'testsuite_skipif.inc';
 <?php
 require_once 'testsuite_utilities.inc';
 
-$redis = create_phpiredis_connection('169.254.10.10', REDIS_PORT, false, 200);
+$redis = create_phpiredis_connection('169.254.10.10', REDIS_PORT, true, 200);
 usleep(500000);
 
 --EXPECTF--

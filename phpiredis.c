@@ -114,7 +114,7 @@ PHP_FUNCTION(phpiredis_connect)
 {
     phpiredis_connection *connection;
     char *ip;
-    int ip_size;
+    PHPIREDIS_LEN_TYPE ip_size;
     long port = 6379;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &ip, &ip_size, &port) == FAILURE) {
@@ -127,20 +127,13 @@ PHP_FUNCTION(phpiredis_connect)
         RETURN_FALSE;
     }
 
-    //This should work:
-    //PHPIREDIS_RETURN_RESOURCE(connection, le_redis_context);
-    //But the below is easier to debug
-
-    zend_resource *zr = zend_register_resource(connection, le_redis_context);    
-    ZVAL_RES(return_value, zr);
-
-    return;
+    PHPIREDIS_RETURN_RESOURCE(connection, le_redis_context);
 }
 
 PHP_FUNCTION(phpiredis_pconnect)
 {
     char *ip;
-    int ip_size;
+    PHPIREDIS_LEN_TYPE ip_size;
     long port = 6379;
 
     char *hashed_details = NULL;
@@ -149,7 +142,6 @@ PHP_FUNCTION(phpiredis_pconnect)
 #ifdef ZEND_ENGINE_3
     zval *p_zval;
     zend_string *hashed_details_str;
-    zend_resource *le;
     zend_resource new_le;
     zval new_le_zval;
 #else
@@ -214,8 +206,6 @@ PHP_FUNCTION(phpiredis_disconnect)
 {
     zval *connection;
     redisContext *c;
-    void *unknown_type = NULL;
-
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &connection) == FAILURE) {
         return;
@@ -239,7 +229,6 @@ PHP_FUNCTION(phpiredis_disconnect)
 
 PHP_FUNCTION(phpiredis_multi_command)
 {
-    zval **tmp;
     HashPosition pos;
     zval *resource;
     phpiredis_connection *connection;
@@ -247,11 +236,13 @@ PHP_FUNCTION(phpiredis_multi_command)
     zval **arg2;
     int commands;
     int i;
-    zval temp;
 
 #ifdef ZEND_ENGINE_3
     zend_resource *connection_resource;
     zval *p_zval;
+#else 
+    zval **tmp;
+    zval temp;
 #endif
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rZ", &resource, &arg2) == FAILURE) {
@@ -320,10 +311,6 @@ PHP_FUNCTION(phpiredis_multi_command)
 
 PHP_FUNCTION(phpiredis_multi_command_bs)
 {
-    zval **tmp;
-    zval **tmpArg;
-    HashPosition cmdsPos;
-    HashPosition cmdArgsPos;
     zval *resource;
     phpiredis_connection *connection;
     zval *cmds;
@@ -398,8 +385,7 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
     array_init(return_value);
     for (i = 0; i < commands; ++i) {
         redisReply *reply = NULL;
-        zval* result;
-        MAKE_STD_ZVAL(result);
+        zval result;
 
         if (redisGetReply(connection->c, (void *)&reply) != REDIS_OK) {
             for (; i < commands; ++i) {
@@ -408,12 +394,11 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
 
             if (reply) freeReplyObject(reply);
 
-            efree(result);
             break;
         }
 
-        convert_redis_to_php(NULL, result, reply TSRMLS_CC);
-        add_index_zval(return_value, i, result);
+        convert_redis_to_php(NULL, &result, reply TSRMLS_CC);
+        add_index_zval(return_value, i, &result);
         freeReplyObject(reply);
     }
 }
@@ -519,7 +504,7 @@ PHP_FUNCTION(phpiredis_command)
     redisReply *reply = NULL;
     phpiredis_connection *connection;
     char *command;
-    int command_size;
+    PHPIREDIS_LEN_TYPE command_size;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", &resource, &command, &command_size) == FAILURE) {
         return;
@@ -594,14 +579,14 @@ PHP_FUNCTION(phpiredis_command_bs)
 //    while (zend_hash_get_current_data_ex(Z_ARRVAL_P(params), (void **) &tmp, &pos) == SUCCESS) {
         switch (Z_TYPE_P(p_zv)) {
                 case IS_STRING: {
-                        argvlen[i] = (size_t) Z_STRLEN_PP(p_zv);
+                        argvlen[i] = (size_t) Z_STRLEN_P(p_zv);
                         argv[i] = emalloc(sizeof(char) * argvlen[i]);
                         memcpy(argv[i], Z_STRVAL_P(p_zv), argvlen[i]);
                     }
                     break;
 
                 case IS_OBJECT: {
-                        int copy;
+                        //int copy;
                         zval expr;
                         zend_make_printable_zval(p_zv, &expr);
                         argvlen[i] = Z_STRLEN(expr);
@@ -692,7 +677,7 @@ PHP_FUNCTION(phpiredis_format_command)
     //zval **tmp;
     HashPosition pos;
     zval *arr;
-    zval temp;
+    //zval temp;
     zval *p_zv;
 
     int size;
@@ -897,14 +882,23 @@ void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, redisRep
             return;
 
         case REDIS_REPLY_ARRAY: {
+#ifdef ZEND_ENGINE_3
+                zval val;
+#else
                 zval *val;
+#endif
                 int j;
 
                 array_init(return_value);
                 for (j = 0; j < reply->elements; j++) {
+#ifdef ZEND_ENGINE_3
+                    convert_redis_to_php(reader, &val, reply->element[j] TSRMLS_CC);
+                    add_index_zval(return_value, j, &val);
+#else
                     MAKE_STD_ZVAL(val);
                     convert_redis_to_php(reader, val, reply->element[j] TSRMLS_CC);
                     add_index_zval(return_value, j, val);
+#endif
                 }
             }
             return;
@@ -933,7 +927,7 @@ PHP_FUNCTION(phpiredis_reader_create)
 
 PHP_FUNCTION(phpiredis_reader_set_error_handler)
 {
-    zval *ptr, **function;
+    zval *ptr, *function;
     phpiredis_reader *reader;
     zend_resource *reader_resource;
     zend_string *name;
@@ -945,10 +939,10 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
     reader_resource = Z_RES_P(ptr);
     reader = (void *)zend_fetch_resource(reader_resource, PHPIREDIS_READER_NAME, le_redis_reader_context);
 
-    if (Z_TYPE_PP(function) == IS_NULL) {
+    if (Z_TYPE_P(function) == IS_NULL) {
         free_reader_error_callback(reader TSRMLS_CC);
     } else {
-        if (!zend_is_callable(*function, 0, &name TSRMLS_CC)) {
+        if (!zend_is_callable(function, 0, &name TSRMLS_CC)) {
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Argument is not a valid callback");
             zend_string_release(name);
             RETURN_FALSE;
@@ -959,8 +953,8 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
 
         reader->error_callback = emalloc(sizeof(callback));
 
-        Z_ADDREF_PP(function);
-        ((callback*) reader->error_callback)->function = *function;
+        Z_ADDREF_P(function);
+        ((callback*) reader->error_callback)->function = function;
     }
 
     RETURN_TRUE;
@@ -968,7 +962,7 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
 
 PHP_FUNCTION(phpiredis_reader_set_status_handler)
 {
-    zval *ptr, **function;
+    zval *ptr, *function;
     phpiredis_reader *reader;
     zend_resource *reader_resource;
     zend_string *name;
@@ -980,10 +974,10 @@ PHP_FUNCTION(phpiredis_reader_set_status_handler)
     reader_resource = Z_RES_P(ptr);
     reader = (void *)zend_fetch_resource(reader_resource, PHPIREDIS_READER_NAME, le_redis_reader_context);
 
-    if (Z_TYPE_PP(function) == IS_NULL) {
+    if (Z_TYPE_P(function) == IS_NULL) {
         free_reader_status_callback(reader TSRMLS_CC);
     } else {
-        if (!zend_is_callable(*function, 0, &name TSRMLS_CC)) {
+        if (!zend_is_callable(function, 0, &name TSRMLS_CC)) {
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Argument is not a valid callback");
             zend_string_release(name);
             RETURN_FALSE;
@@ -994,8 +988,8 @@ PHP_FUNCTION(phpiredis_reader_set_status_handler)
 
         reader->status_callback = emalloc(sizeof(callback));
 
-        Z_ADDREF_PP(function);
-        ((callback*) reader->status_callback)->function = *function;
+        Z_ADDREF_P(function);
+        ((callback*) reader->status_callback)->function = function;
     }
 
     RETURN_TRUE;
@@ -1192,6 +1186,7 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
 #ifdef ZEND_ENGINE_3
     zend_resource *reader_resource;
 #endif
+    void* aux;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|Z", &ptr, &type) == FAILURE) {
         return;
@@ -1204,8 +1199,6 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
 #else
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
 #endif
-
-    void* aux;
 
     if (reader->bufferedReply) {
         aux = reader->bufferedReply;

@@ -259,31 +259,22 @@ PHP_FUNCTION(phpiredis_multi_command)
     HashPosition pos;
     zval *resource;
     phpiredis_connection *connection;
-    zval *arr;
+    zval *p_arg2;
     
     int commands;
     int i;
-    zval **arg2;
 
 #ifdef ZEND_ENGINE_3
     zend_resource *connection_resource;
     zval *p_zval;
-    zval *p_arg2;
+#else 
+    zval **tmp;
+    zval temp;
+#endif
     
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rz", &resource, &p_arg2) == FAILURE) {
         return;
     }
-    arg2 = &p_arg2;
-#else 
-    zval **tmp;
-    zval temp;
-
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rZ", &resource, &arg2) == FAILURE) {
-        return;
-    }
-    
-#endif
-
     
 #ifdef ZEND_ENGINE_3
     connection_resource = Z_RES_P(resource);
@@ -293,24 +284,23 @@ PHP_FUNCTION(phpiredis_multi_command)
     ZEND_FETCH_RESOURCE2(connection, phpiredis_connection *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
 #endif
 
-    arr = *arg2;
-    zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(arr), &pos);
+    zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(p_arg2), &pos);
 
     commands = 0;
     
 #ifdef ZEND_ENGINE_3
-    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(arr), p_zval) {
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(p_arg2), p_zval) {
         ++commands;
         redisAppendCommand(connection->c, Z_STRVAL_P(p_zval));
     } ZEND_HASH_FOREACH_END();
 #else
-    while (zend_hash_get_current_data_ex(Z_ARRVAL_P(arr), (void **) &tmp, &pos) == SUCCESS) {
+    while (zend_hash_get_current_data_ex(Z_ARRVAL_P(p_arg2), (void **) &tmp, &pos) == SUCCESS) {
         temp = **tmp;
         zval_copy_ctor(&temp);
         convert_to_string(&temp);
         ++commands;
         redisAppendCommand(connection->c, Z_STRVAL(temp));
-        zend_hash_move_forward_ex(Z_ARRVAL_P(arr), &pos);
+        zend_hash_move_forward_ex(Z_ARRVAL_P(p_arg2), &pos);
         zval_dtor(&temp);
     }
 #endif
@@ -333,7 +323,7 @@ PHP_FUNCTION(phpiredis_multi_command)
 
             if (reply) freeReplyObject(reply);
 #ifndef ZEND_ENGINE_3
-            efree(result);
+            efree(p_result);
 #endif
             break;
         }
@@ -496,7 +486,7 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
             ++cmdPos;
         }
 
-        redisAppendCommandArgv(connection->c, cmdSize, cmdElements, cmdElementslen);
+        redisAppendCommandArgv(connection->c, cmdSize, (const char **)cmdElements, cmdElementslen);
 
         for (; cmdPos > 0; --cmdPos) {
            efree(cmdElements[cmdPos-1]);
@@ -515,7 +505,7 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
         zval* result;
         MAKE_STD_ZVAL(result);
 
-        if (redisGetReply(connection->c, &reply) != REDIS_OK) {
+        if (redisGetReply(connection->c, (void **)&reply) != REDIS_OK) {
             for (; i < commands; ++i) {
                 add_index_bool(return_value, i, 0);
             }
@@ -588,6 +578,9 @@ PHP_FUNCTION(phpiredis_command_bs)
     zval *p_zv;
     HashPosition pos;
     int i;
+#ifndef ZEND_ENGINE_3
+     zval **tmp;
+#endif
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ra", &resource, &params) == FAILURE) {
         return;
@@ -634,11 +627,13 @@ PHP_FUNCTION(phpiredis_command_bs)
                     break;
         }
 
-        zend_hash_move_forward_ex(Z_ARRVAL_P(params), &pos);
+        //zend_hash_move_forward_ex(Z_ARRVAL_P(params), &pos);
         ++i;
     } ZEND_HASH_FOREACH_END();
 
 #else
+
+    zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(params), &pos);
 
     while (zend_hash_get_current_data_ex(Z_ARRVAL_P(params), (void **) &tmp, &pos) == SUCCESS) {
         switch ((*tmp)->type) {
@@ -789,7 +784,7 @@ PHP_FUNCTION(phpiredis_format_command)
         ++currpos;
     }
 
-    cmdlen = redisFormatCommandArgv(&cmd, size, elements, elementslen);
+    cmdlen = redisFormatCommandArgv(&cmd, size, (const char **)elements, elementslen);
     ZVAL_STRINGL(return_value, cmd, cmdlen, 1);
 
     for (; currpos > 0; --currpos) {

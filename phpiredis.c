@@ -31,7 +31,12 @@ int le_redis_persistent_context;
 #endif
 
 typedef struct callback {
+
+#ifdef ZEND_ENGINE_3
+    zval function;
+#else
     zval *function;
+#endif
 } callback;
 
 static
@@ -84,12 +89,20 @@ void php_redis_reader_dtor(PHPIREDIS_RESOURCE_TYPE *rsrc TSRMLS_DC)
         }
 
         if (_reader->error_callback != NULL) {
+#ifdef ZEND_ENGINE_3
+            Z_TRY_DELREF_P(&((callback*) _reader->error_callback)->function);
+#else
             efree(((callback*) _reader->error_callback)->function);
+#endif
             efree(_reader->error_callback);
         }
 
         if (_reader->status_callback != NULL) {
-            efree(((callback*) _reader->status_callback)->function);
+#ifdef ZEND_ENGINE_3
+            Z_TRY_DELREF_P(&((callback*) _reader->status_callback)->function);
+#else
+            efree(function_ptr);
+#endif
             efree(_reader->status_callback);
         }
 
@@ -801,7 +814,11 @@ static
 void free_reader_status_callback(phpiredis_reader *reader TSRMLS_DC)
 {
     if (reader->status_callback) {
+#ifdef ZEND_ENGINE_3
+        Z_TRY_DELREF_P(&((callback*) reader->status_callback)->function);
+#else
         efree(((callback*) reader->status_callback)->function);
+#endif
         efree(reader->status_callback);
         reader->status_callback = NULL;
     }
@@ -811,7 +828,12 @@ static
 void free_reader_error_callback(phpiredis_reader *reader TSRMLS_DC)
 {
     if (reader->error_callback) {
+
+#ifdef ZEND_ENGINE_3
+        Z_TRY_DELREF_P(&((callback*) reader->error_callback)->function);
+#else
         efree(((callback*) reader->error_callback)->function);
+#endif
         efree(reader->error_callback);
         reader->error_callback = NULL;
     }
@@ -840,7 +862,8 @@ void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, redisRep
 #ifdef ZEND_ENGINE_3
                         zval arg;
                         ZVAL_STRINGL(&arg, reply->str, reply->len);
-                        if (call_user_function(EG(function_table), NULL, ((callback*) reader->error_callback)->function, return_value, 1, &arg TSRMLS_CC) == FAILURE) {
+ 
+                        if (call_user_function(EG(function_table), NULL, &((callback*) reader->error_callback)->function, return_value, 1, &arg TSRMLS_CC) == FAILURE) {
                             zval_ptr_dtor(return_value);
                             ZVAL_NULL(return_value);
                         }
@@ -864,12 +887,11 @@ void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, redisRep
 #ifdef ZEND_ENGINE_3
                         zval arg;
                         ZVAL_STRINGL(&arg, reply->str, reply->len);
-                        if (call_user_function(EG(function_table), NULL, ((callback*) reader->status_callback)->function, return_value, 1, &arg TSRMLS_CC) == FAILURE) {
+                        ZVAL_STRINGL(return_value, reply->str, reply->len);
+                        if (call_user_function(EG(function_table), NULL, &((callback*) reader->status_callback)->function, return_value, 1, &arg TSRMLS_CC) == FAILURE) {
                             zval_ptr_dtor(return_value);
                             ZVAL_NULL(return_value);
                         }
-
-                        //zval_ptr_dtor(&arg[0]);
 #else
                         zval *arg[1];
 
@@ -943,7 +965,7 @@ PHP_FUNCTION(phpiredis_reader_create)
 
 PHP_FUNCTION(phpiredis_reader_set_error_handler)
 {
-    zval *ptr, *function;
+    zval *ptr, *function = NULL;
     phpiredis_reader *reader;
     zend_resource *reader_resource;
     zend_string *name;
@@ -969,8 +991,8 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
 
         reader->error_callback = emalloc(sizeof(callback));
 
-        Z_ADDREF_P(function);
-        ((callback*) reader->error_callback)->function = function;
+        Z_TRY_ADDREF_P(function); //TODO - this is incorrect? We are copying value not reference.
+        ZVAL_COPY_VALUE(&((callback*) reader->error_callback)->function, function);
     }
 
     RETURN_TRUE;
@@ -1005,7 +1027,7 @@ PHP_FUNCTION(phpiredis_reader_set_status_handler)
         reader->status_callback = emalloc(sizeof(callback));
 
         Z_ADDREF_P(function);
-        ((callback*) reader->status_callback)->function = function;
+        ZVAL_COPY_VALUE(&((callback*) reader->status_callback)->function, function);
     }
 
     RETURN_TRUE;
@@ -1143,7 +1165,7 @@ PHP_FUNCTION(phpiredis_reader_feed)
     zval *ptr;
     phpiredis_reader *reader;
     char *bytes;
-    int size;
+    PHPIREDIS_LEN_TYPE size;
 
 #ifdef ZEND_ENGINE_3
     zend_resource *reader_resource;
@@ -1159,6 +1181,7 @@ PHP_FUNCTION(phpiredis_reader_feed)
 #else
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
 #endif
+
     redisReplyReaderFeed(reader->reader, bytes, size);
 }
 
@@ -1243,19 +1266,20 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
 
     convert_redis_to_php(reader, return_value, aux TSRMLS_CC);
 
-#ifdef ZEND_ENGINE_3
-    //This should work - but doesn't. :-P
-    if (p_type != NULL) {
-        // ZVAL_DEREF(p_type); is this needed?
-        zval_ptr_dtor(p_type);
-        ZVAL_LONG(p_type, aux->type);
-    }
-#else
+//#ifdef ZEND_ENGINE_3
+//    //This should work - but doesn't. :-P
+//    if (p_type != NULL) {
+//        // ZVAL_DEREF(p_type); is this needed?
+//        zval_ptr_dtor(p_type);
+//        ZVAL_LONG(p_type, aux->type);
+//    }
+//#else
+//#endif
     if (ZEND_NUM_ARGS() > 1) {
         zval_dtor(*type);
         ZVAL_LONG(*type, aux->type);
     }
-#endif
+
 
     freeReplyObject(aux);
 }

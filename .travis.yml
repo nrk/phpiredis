@@ -26,4 +26,4 @@ script:
     - phpize
     - ./configure --enable-phpiredis
     - make
-    - make test
+    - php run-tests.php -d extension=phpiredis.so -d extension_dir=modules -n ./*.phpt

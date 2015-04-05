@@ -172,6 +172,7 @@ PHP_FUNCTION(phpiredis_pconnect)
     zval new_resource;
     zend_resource *p_new_resource;
     zval new_le_zval;
+    zend_resource new_le;
 #else
     zend_rsrc_list_entry new_le, *le;
 #endif
@@ -209,6 +210,8 @@ PHP_FUNCTION(phpiredis_pconnect)
 
     connection = s_create_connection(ip, port, 1);
 
+    
+
     if (!connection) {
         efree(hashed_details);
         RETURN_FALSE;
@@ -218,18 +221,23 @@ PHP_FUNCTION(phpiredis_pconnect)
     p_new_resource = zend_register_resource(connection, le_redis_persistent_context);
     RETVAL_RES(p_new_resource);
 
-    //if (zend_hash_update(&EG(persistent_list), hash_string, return_value) == NULL) {
-    //if (zend_hash_str_update(&EG(persistent_list), hashed_details, hashed_details_length, return_value) == NULL) {
-    if (zend_hash_str_add(&EG(persistent_list), hashed_details, hashed_details_length, return_value) == NULL) {
+    new_le.type = le_redis_persistent_context;
+    new_le.ptr = connection;
+    
+    ZVAL_NEW_PERSISTENT_RES(&new_le, -1, mysql, le_plink);
+    
+    if (zend_hash_str_update_mem(&EG(persistent_list), hashed_details, hashed_details_length, &new_le, sizeof(zend_resource)) == NULL) {
 #else
     new_le.type = le_redis_persistent_context;
     new_le.ptr = connection;
 
     if (zend_hash_update(&EG(persistent_list), hashed_details, hashed_details_length+1, (void *) &new_le, sizeof(zend_rsrc_list_entry), NULL)==FAILURE) {
 #endif
+
+        
+
         s_destroy_connection (connection TSRMLS_CC);
         efree(hashed_details);
-
         RETURN_FALSE;
     }
 

@@ -1143,9 +1143,10 @@ PHP_FUNCTION(phpiredis_reader_reset)
 PHP_FUNCTION(phpiredis_reader_destroy)
 {
     zval *ptr;
-    phpiredis_reader *reader;
 #ifdef ZEND_ENGINE_3
     zend_resource *reader_resource;
+#else
+    phpiredis_reader *reader;
 #endif
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &ptr) == FAILURE) {
@@ -1154,7 +1155,6 @@ PHP_FUNCTION(phpiredis_reader_destroy)
 
 #ifdef ZEND_ENGINE_3
     reader_resource = Z_RES_P(ptr);
-    reader = (void *)zend_fetch_resource(reader_resource, PHPIREDIS_READER_NAME, le_redis_reader_context);
     zend_list_delete(reader_resource);
 #else
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);

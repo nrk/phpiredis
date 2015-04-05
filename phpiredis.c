@@ -101,7 +101,7 @@ void php_redis_reader_dtor(PHPIREDIS_RESOURCE_TYPE *rsrc TSRMLS_DC)
 #ifdef ZEND_ENGINE_3
             Z_TRY_DELREF_P(&((callback*) _reader->status_callback)->function);
 #else
-            efree(function_ptr);
+            efree(((callback*) _reader->status_callback)->function);
 #endif
             efree(_reader->status_callback);
         }

@@ -223,9 +223,7 @@ PHP_FUNCTION(phpiredis_pconnect)
 
     new_le.type = le_redis_persistent_context;
     new_le.ptr = connection;
-    
-    ZVAL_NEW_PERSISTENT_RES(&new_le, -1, mysql, le_plink);
-    
+
     if (zend_hash_str_update_mem(&EG(persistent_list), hashed_details, hashed_details_length, &new_le, sizeof(zend_resource)) == NULL) {
 #else
     new_le.type = le_redis_persistent_context;

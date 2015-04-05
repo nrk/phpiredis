@@ -23,6 +23,9 @@ install:
         && popd
 
 script:
+    - export NO_INTERACTION=1
+    - export REPORT_EXIT_STATUS=1
+    - . ./travis_cflags.sh
     - phpize
     - ./configure --enable-phpiredis
     - make

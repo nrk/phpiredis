@@ -169,9 +169,7 @@ PHP_FUNCTION(phpiredis_pconnect)
     phpiredis_connection *connection;
 #ifdef ZEND_ENGINE_3
     zval *p_zval;
-    zval new_resource;
     zend_resource *p_new_resource;
-    zval new_le_zval;
     zend_resource new_le;
 #else
     zend_rsrc_list_entry new_le, *le;
@@ -574,7 +572,7 @@ PHP_FUNCTION(phpiredis_command)
     }
 
     if (reply->type == REDIS_REPLY_ERROR) {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, reply->str);
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", reply->str);
         freeReplyObject(reply);
 
         RETURN_FALSE;
@@ -594,11 +592,12 @@ PHP_FUNCTION(phpiredis_command_bs)
     int argc;
     char ** argv;
     size_t * argvlen;
-    zval *p_zv;
-    HashPosition pos;
     int i;
-#ifndef ZEND_ENGINE_3
-     zval **tmp;
+#ifdef ZEND_ENGINE_3
+    zval *p_zv;
+#else
+    HashPosition pos;
+    zval **tmp;
 #endif
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ra", &resource, &params) == FAILURE) {
@@ -875,7 +874,6 @@ void convert_redis_to_php(phpiredis_reader* reader, zval* return_value, redisRep
                         }
 #else
                         zval *arg[1];
-                        zval *p_arg;
                         MAKE_STD_ZVAL(arg[0]);
                         ZVAL_STRINGL(arg[0], reply->str, reply->len, 1);
                         if (call_user_function(EG(function_table), NULL, ((callback*) reader->error_callback)->function, return_value, 1, arg TSRMLS_CC) == FAILURE) {

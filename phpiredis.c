@@ -16,18 +16,15 @@ int le_redis_persistent_context;
 #include <zend_API.h>
 
 #ifdef ZEND_ENGINE_3
-	#define PHPIREDIS_LEN_TYPE size_t
-	#define PHPIREDIS_RESOURCE_TYPE zend_resource
-
-#define PHPIREDIS_RETURN_RESOURCE(connection, context) \
-    RETURN_RES(zend_register_resource(connection, context))
+    #define PHPIREDIS_LEN_TYPE size_t
+    #define PHPIREDIS_RESOURCE_TYPE zend_resource
+    #define PHPIREDIS_RETURN_RESOURCE(connection, context) \
+        RETURN_RES(zend_register_resource(connection, context))
 #else
-#define PHPIREDIS_LEN_TYPE int
-#define PHPIREDIS_RESOURCE_TYPE zend_rsrc_list_entry
-
-
-#define PHPIREDIS_RETURN_RESOURCE(connection, context) \
-    ZEND_REGISTER_RESOURCE(return_value, connection, context)
+    #define PHPIREDIS_LEN_TYPE int
+    #define PHPIREDIS_RESOURCE_TYPE zend_rsrc_list_entry
+    #define PHPIREDIS_RETURN_RESOURCE(connection, context) \
+        ZEND_REGISTER_RESOURCE(return_value, connection, context)
 #endif
 
 typedef struct callback {
@@ -175,7 +172,6 @@ PHP_FUNCTION(phpiredis_pconnect)
     zend_rsrc_list_entry new_le, *le;
 #endif
 
-
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &ip, &ip_size, &port) == FAILURE) {
         return;
     }
@@ -183,12 +179,8 @@ PHP_FUNCTION(phpiredis_pconnect)
     hashed_details_length = spprintf(&hashed_details, 0, "phpiredis_%s_%d", ip, (int)port);
 
 #ifdef ZEND_ENGINE_3
-    //Both of these should work - but weird stuff is happening in the shutdown.
-    //zend_string *hash_string;
-    //hash_string = strpprintf(0, "phpiredis_%s_%d", ip, (int)port);
-    //p_zval = zend_hash_find_ptr(&EG(persistent_list), hash_string);
     p_zval = zend_hash_str_find_ptr(&EG(persistent_list), hashed_details, hashed_details_length);
-        
+
     if (p_zval != NULL) {
         if (Z_RES_P(p_zval)->type != le_redis_persistent_context) {
             RETURN_FALSE;
@@ -208,29 +200,19 @@ PHP_FUNCTION(phpiredis_pconnect)
 
     connection = s_create_connection(ip, port, 1);
 
-    
-
     if (!connection) {
         efree(hashed_details);
         RETURN_FALSE;
     }
 
-#ifdef ZEND_ENGINE_3  
-    p_new_resource = zend_register_resource(connection, le_redis_persistent_context);
-    RETVAL_RES(p_new_resource);
-
     new_le.type = le_redis_persistent_context;
     new_le.ptr = connection;
 
+#ifdef ZEND_ENGINE_3  
     if (zend_hash_str_update_mem(&EG(persistent_list), hashed_details, hashed_details_length, &new_le, sizeof(zend_resource)) == NULL) {
 #else
-    new_le.type = le_redis_persistent_context;
-    new_le.ptr = connection;
-
     if (zend_hash_update(&EG(persistent_list), hashed_details, hashed_details_length+1, (void *) &new_le, sizeof(zend_rsrc_list_entry), NULL)==FAILURE) {
 #endif
-
-        
 
         s_destroy_connection (connection TSRMLS_CC);
         efree(hashed_details);
@@ -239,11 +221,7 @@ PHP_FUNCTION(phpiredis_pconnect)
 
     efree(hashed_details);
     
-#ifdef ZEND_ENGINE_3
-    return;
-#else
-    PHPIREDIS_RETURN_RESOURCE(connection, le_redis_persistent_context);
-#endif    
+    PHPIREDIS_RETURN_RESOURCE(connection, le_redis_persistent_context);    
 }
 
 PHP_FUNCTION(phpiredis_disconnect)
@@ -262,7 +240,7 @@ PHP_FUNCTION(phpiredis_disconnect)
         //Resource fetching can fail.
         RETURN_FALSE;
     }
-    zend_list_delete(Z_RES_P(connection));
+    zend_list_close(Z_RES_P(connection));
 #else
     ZEND_FETCH_RESOURCE2(c, redisContext *, &connection, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
     zend_list_delete(Z_LVAL_P(connection));
@@ -296,7 +274,9 @@ PHP_FUNCTION(phpiredis_multi_command)
 #ifdef ZEND_ENGINE_3
     connection_resource = Z_RES_P(resource);
     connection = (phpiredis_connection *)zend_fetch_resource2(connection_resource, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
-    //Needs error check
+    if (connection != NULL) {
+        // Needs error check
+    }
 #else
     ZEND_FETCH_RESOURCE2(connection, phpiredis_connection *, &resource, -1, PHPIREDIS_CONNECTION_NAME, le_redis_context, le_redis_persistent_context);
 #endif
@@ -384,33 +364,20 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
     }
 
     commands = 0;
-//    zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(cmds), &cmdsPos);
-    //while (zend_hash_get_current_data_ex(Z_ARRVAL_P(cmds), (void **) &tmp, &cmdsPos) == SUCCESS) {
-    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(cmds), p_cmdArgs) {
-        //cmdArgs = **tmp;
-        //zval_copy_ctor(&cmdArgs);
 
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(cmds), p_cmdArgs) {
         cmdPos = 0;
         cmdSize = zend_hash_num_elements(Z_ARRVAL_P(p_cmdArgs));
         cmdElements = emalloc(sizeof(char*) * cmdSize);
         cmdElementslen = emalloc(sizeof(size_t) * cmdSize);
 
-        //zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(&cmdArgs), &cmdArgsPos);
-        //while (zend_hash_get_current_data_ex(Z_ARRVAL_P(&cmdArgs), (void **) &tmpArg, &cmdArgsPos) == SUCCESS) {
         ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(p_cmdArgs), p_cmdArg) {        
             zend_string *str = zval_get_string(p_cmdArg);
-            //cmdArg = **tmpArg;
-            //zval_copy_ctor(&cmdArg);
-            //convert_to_string(&cmdArg);
             cmdElementslen[cmdPos] = (size_t) str->len;
             cmdElements[cmdPos] = emalloc(sizeof(char) * cmdElementslen[cmdPos]);
             memcpy(cmdElements[cmdPos], str->val, cmdElementslen[cmdPos]);
-
-            //zval_dtor(&cmdArg);
-            //zend_hash_move_forward_ex(Z_ARRVAL_P(&cmdArgs), &cmdArgsPos);
             ++cmdPos;
         } ZEND_HASH_FOREACH_END();
-
 
         redisAppendCommandArgv(connection->c, cmdSize, (const char **)cmdElements, cmdElementslen);
 
@@ -420,8 +387,6 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
         efree(cmdElements);
         efree(cmdElementslen);
 
-        //zend_hash_move_forward_ex(Z_ARRVAL_P(cmds), &cmdsPos);
-        //zval_dtor(&cmdArgs);
         ++commands;
     } ZEND_HASH_FOREACH_END();
 
@@ -446,7 +411,6 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
         freeReplyObject(reply);
     }
 }
-
 
 #else
 
@@ -715,7 +679,6 @@ PHP_FUNCTION(phpiredis_command_bs)
 
 
 #ifdef ZEND_ENGINE_3
-
 PHP_FUNCTION(phpiredis_format_command)
 {
     HashPosition pos;
@@ -1155,7 +1118,7 @@ PHP_FUNCTION(phpiredis_reader_destroy)
 
 #ifdef ZEND_ENGINE_3
     reader_resource = Z_RES_P(ptr);
-    zend_list_delete(reader_resource);
+    zend_list_close(reader_resource);
 #else
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
     zend_list_delete(Z_LVAL_P(ptr));

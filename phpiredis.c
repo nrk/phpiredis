@@ -166,7 +166,6 @@ PHP_FUNCTION(phpiredis_pconnect)
     phpiredis_connection *connection;
 #ifdef ZEND_ENGINE_3
     zval *p_zval;
-    zend_resource *p_new_resource;
     zend_resource new_le;
 #else
     zend_rsrc_list_entry new_le, *le;

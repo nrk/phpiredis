@@ -7,6 +7,8 @@ php:
     - 5.6
     - 7
 
+sudo: false
+
 services:
   - redis-server
 
@@ -19,7 +21,7 @@ install:
         git clone https://github.com/redis/hiredis.git \
         && pushd hiredis \
         && make \
-        && sudo make install \
+        && make install \
         && popd
 
 script:

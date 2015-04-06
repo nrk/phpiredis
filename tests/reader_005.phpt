@@ -17,7 +17,7 @@ if ($reply != 'OK') {
     echo "Value of reply '$reply' is not 'OK'\n";
 }
 if ($type != PHPIREDIS_REPLY_STATUS) {
-    echo "Value of type '$type' != ".PHPIREDIS_REPLY_STATUS."\n";
+    echo "Value of type '$type' != PHPIREDIS_REPLY_STATUS(".PHPIREDIS_REPLY_STATUS.")\n";
 }
 
 $reader = phpiredis_reader_create();
@@ -27,7 +27,7 @@ if ($reply != 'ERR') {
     echo "Value of reply '$reply' is not 'ERR'\n";
 }
 if ($type != PHPIREDIS_REPLY_ERROR) {
-    echo "Value of type '$type' != ".PHPIREDIS_REPLY_ERROR."\n";
+    echo "Value of type '$type' != PHPIREDIS_REPLY_ERROR(".PHPIREDIS_REPLY_ERROR.")\n";
 }
 echo "OK\n";
 

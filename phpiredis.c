@@ -1204,7 +1204,6 @@ PHP_FUNCTION(phpiredis_reader_get_error)
 #ifdef ZEND_ENGINE_3
     reader_resource = Z_RES_P(ptr);
     reader = (void *)zend_fetch_resource(reader_resource, PHPIREDIS_READER_NAME, le_redis_reader_context);
-    //zend_list_delete(reader_resource);
 #else
     ZEND_FETCH_RESOURCE(reader, void *, &ptr, -1, PHPIREDIS_READER_NAME, le_redis_reader_context);
 #endif
@@ -1232,11 +1231,11 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
 
 #ifdef ZEND_ENGINE_3
     zval *p_type = NULL;
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|z", &ptr, &p_type) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|z/", &ptr, &p_type) == FAILURE) {
         return;
     }
 
-    type = &p_type;    
+    type = &p_type;
 #else
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|Z", &ptr, &type) == FAILURE) {
         return;
@@ -1265,25 +1264,21 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
         } else if (aux == NULL) {
             RETURN_FALSE; // incomplete
         }
-
     }
 
     convert_redis_to_php(reader, return_value, aux TSRMLS_CC);
 
-//#ifdef ZEND_ENGINE_3
-//    //This should work - but doesn't. :-P
-//    if (p_type != NULL) {
-//        // ZVAL_DEREF(p_type); is this needed?
-//        zval_ptr_dtor(p_type);
-//        ZVAL_LONG(p_type, aux->type);
-//    }
-//#else
-//#endif
+#ifdef ZEND_ENGINE_3
+    if (p_type) {
+        zval_dtor(*type);
+        ZVAL_LONG(p_type, aux->type);
+    }
+#else
     if (ZEND_NUM_ARGS() > 1) {
         zval_dtor(*type);
         ZVAL_LONG(*type, aux->type);
     }
-
+#endif
 
     freeReplyObject(aux);
 }
@@ -1351,7 +1346,7 @@ PHP_MINIT_FUNCTION(phpiredis)
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_reader_get_reply, 0, 0, 1)
 	ZEND_ARG_INFO(0, ptr)
-	ZEND_ARG_INFO(0, type)
+	ZEND_ARG_INFO(1, type)
 ZEND_END_ARG_INFO()
 
 static zend_function_entry phpiredis_functions[] = {

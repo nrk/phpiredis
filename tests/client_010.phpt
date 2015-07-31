@@ -11,11 +11,11 @@ require_once 'testsuite_utilities.inc';
 
 $redis = create_phpiredis_connection(REDIS_HOST, REDIS_PORT);
 
-phpiredis_command($redis, 'SET a 1');
+phpiredis_command($redis, 'SET ' . TESTKEY . ' 1');
 
-var_dump(phpiredis_command($redis, 'GET a'));
+var_dump(phpiredis_command($redis, 'GET ' . TESTKEY));
 var_dump(phpiredis_command($redis, 'QUIT'));
-var_dump(phpiredis_command($redis, 'GET a'));
+var_dump(phpiredis_command($redis, 'GET ' . TESTKEY));
 
 --EXPECT--
 string(1) "1"

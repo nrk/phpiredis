@@ -19,9 +19,9 @@ $resource = fopen('/dev/urandom', 'r');
 $data = fread($resource, 1024);
 fclose($resource);
 
-phpiredis_command_bs($redis, array('DEL', 'test'));
-phpiredis_command_bs($redis, array('SET', 'test', $data));
-$response = phpiredis_command_bs($redis, array('GET', 'test'));
+phpiredis_command_bs($redis, array('DEL', TESTKEY));
+phpiredis_command_bs($redis, array('SET', TESTKEY, $data));
+$response = phpiredis_command_bs($redis, array('GET', TESTKEY));
 
 var_dump($response === $data);
 

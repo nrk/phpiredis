@@ -85,6 +85,14 @@ static void set_reader_error_callback(phpiredis_reader *reader, zval *function T
 
 static void get_command_arguments(zval *arr, char ***elements, size_t **elementslen, int *size)
 {
+#ifdef ZEND_ENGINE_3
+    zval *p_zv;
+#else
+    HashPosition pos;
+    zval **tmp;
+    zval temp;
+#endif
+
     int currpos = 0;
 
     *size = zend_hash_num_elements(Z_ARRVAL_P(arr));
@@ -92,8 +100,6 @@ static void get_command_arguments(zval *arr, char ***elements, size_t **elements
     *elementslen = emalloc(sizeof(size_t) * (*size));
 
 #ifdef ZEND_ENGINE_3
-    zval *p_zv;
-
     ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(arr), p_zv) {
         zend_string *str = zval_get_string(p_zv);
 
@@ -106,10 +112,6 @@ static void get_command_arguments(zval *arr, char ***elements, size_t **elements
         zend_string_release(str);
     } ZEND_HASH_FOREACH_END();
 #else
-    HashPosition pos;
-    zval **tmp;
-    zval temp;
-
     zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(arr), &pos);
     while (zend_hash_get_current_data_ex(Z_ARRVAL_P(arr), (void **) &tmp, &pos) == SUCCESS) {
         temp = **tmp;
@@ -461,7 +463,7 @@ PHP_FUNCTION(phpiredis_disconnect)
         RETURN_FALSE;
     }
 
-    if (fetch_resource_connection(resource) == NULL) {
+    if (fetch_resource_connection(resource TSRMLS_CC) == NULL) {
         RETURN_FALSE;
     }
 
@@ -479,30 +481,32 @@ PHP_FUNCTION(phpiredis_multi_command)
     zval *resource, *cmds;
     phpiredis_connection *connection;
 
+#ifdef ZEND_ENGINE_3
+    zval *p_zval;
+#else
+    HashPosition pos;
+    zval **tmp;
+    zval temp;
+#endif
+
     int commands = 0;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ra", &resource, &cmds) == FAILURE) {
         return;
     }
 
-    connection = fetch_resource_connection(resource);
+    connection = fetch_resource_connection(resource TSRMLS_CC);
     if (connection == NULL) {
         RETURN_FALSE;
     }
 
 #ifdef ZEND_ENGINE_3
-    zval *p_zval;
-
     ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(cmds), p_zval) {
         redisAppendCommand(connection->ctx, Z_STRVAL_P(p_zval));
 
         ++commands;
     } ZEND_HASH_FOREACH_END();
 #else
-    HashPosition pos;
-    zval **tmp;
-    zval temp;
-
     zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(cmds), &pos);
     while (zend_hash_get_current_data_ex(Z_ARRVAL_P(cmds), (void **) &tmp, &pos) == SUCCESS) {
         temp = **tmp;
@@ -519,17 +523,19 @@ PHP_FUNCTION(phpiredis_multi_command)
 #endif
 
     array_init(return_value);
-    get_pipeline_responses(connection, return_value, commands);
+    get_pipeline_responses(connection, return_value, commands TSRMLS_CC);
 }
 
 PHP_FUNCTION(phpiredis_multi_command_bs)
 {
     zval *resource, *cmds;
     phpiredis_connection *connection;
-    zval cmdArgs;
     zval *p_cmdArgs;
-
-    int cmdPos;
+#ifndef ZEND_ENGINE_3
+    zval cmdArgs;
+   	HashPosition cmdsPos;
+    zval **tmp;
+#endif
     int cmdSize;
     char **cmdElements;
     size_t *cmdElementslen;
@@ -540,7 +546,7 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
         return;
     }
 
-    connection = fetch_resource_connection(resource);
+    connection = fetch_resource_connection(resource TSRMLS_CC);
     if (connection == NULL) {
         RETURN_FALSE;
     }
@@ -550,10 +556,6 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
 #ifdef ZEND_ENGINE_3
     ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(cmds), p_cmdArgs) {
 #else
-    zval **tmp;
-    zval **tmpArg;
-    HashPosition cmdsPos;
-    HashPosition cmdArgsPos;
 
     zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(cmds), &cmdsPos);
     while (zend_hash_get_current_data_ex(Z_ARRVAL_P(cmds), (void **) &tmp, &cmdsPos) == SUCCESS) {
@@ -561,7 +563,6 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
         p_cmdArgs = &cmdArgs;
         zval_copy_ctor(p_cmdArgs);
 #endif
-
         get_command_arguments(p_cmdArgs, &cmdElements, &cmdElementslen, &cmdSize);
         redisAppendCommandArgv(connection->ctx, cmdSize, (const char **)cmdElements, cmdElementslen);
 
@@ -578,7 +579,7 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
 #endif
 
     array_init(return_value);
-    get_pipeline_responses(connection, return_value, commands);
+    get_pipeline_responses(connection, return_value, commands TSRMLS_CC);
 }
 
 PHP_FUNCTION(phpiredis_command)
@@ -593,7 +594,7 @@ PHP_FUNCTION(phpiredis_command)
         return;
     }
 
-    connection = fetch_resource_connection(resource);
+    connection = fetch_resource_connection(resource TSRMLS_CC);
     if (connection == NULL) {
         RETURN_FALSE;
     }
@@ -622,7 +623,6 @@ PHP_FUNCTION(phpiredis_command_bs)
 
     redisReply *reply = NULL;
 
-    int cmdPos;
     int cmdSize;
     char **cmdElements;
     size_t *cmdElementslen;
@@ -631,7 +631,7 @@ PHP_FUNCTION(phpiredis_command_bs)
         return;
     }
 
-    connection = fetch_resource_connection(resource);
+    connection = fetch_resource_connection(resource TSRMLS_CC);
     if (connection == NULL) {
         RETURN_FALSE;
     }
@@ -666,8 +666,6 @@ PHP_FUNCTION(phpiredis_format_command)
 
     char *cmd;
     int cmdlen;
-
-    int cmdPos;
     int cmdSize;
     char **cmdElements;
     size_t *cmdElementslen;
@@ -710,7 +708,7 @@ PHP_FUNCTION(phpiredis_reader_set_status_handler)
         return;
     }
 
-    reader = fetch_resource_reader(resource);
+    reader = fetch_resource_reader(resource TSRMLS_CC);
     if (reader == NULL) {
         RETURN_FALSE;
     }
@@ -723,7 +721,7 @@ PHP_FUNCTION(phpiredis_reader_set_status_handler)
             RETURN_FALSE;
         }
 
-        set_reader_status_callback(reader TSRMLS_CC, function);
+        set_reader_status_callback(reader, function TSRMLS_CC);
     }
 
     RETURN_TRUE;
@@ -738,7 +736,7 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
         return;
     }
 
-    reader = fetch_resource_reader(resource);
+    reader = fetch_resource_reader(resource TSRMLS_CC);
     if (reader == NULL) {
         RETURN_FALSE;
     }
@@ -751,7 +749,7 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
             RETURN_FALSE;
         }
 
-        set_reader_error_callback(reader TSRMLS_CC, function);
+        set_reader_error_callback(reader, function TSRMLS_CC);
     }
 
     RETURN_TRUE;
@@ -766,7 +764,7 @@ PHP_FUNCTION(phpiredis_reader_reset)
         return;
     }
 
-    reader = fetch_resource_reader(resource);
+    reader = fetch_resource_reader(resource TSRMLS_CC);
     if (reader == NULL) {
         return;
     }
@@ -792,7 +790,7 @@ PHP_FUNCTION(phpiredis_reader_destroy)
         return;
     }
 
-    reader = fetch_resource_reader(resource);
+    reader = fetch_resource_reader(resource TSRMLS_CC);
     if (reader == NULL) {
         RETURN_FALSE;
     }
@@ -817,7 +815,7 @@ PHP_FUNCTION(phpiredis_reader_feed)
         return;
     }
 
-    reader = fetch_resource_reader(resource);
+    reader = fetch_resource_reader(resource TSRMLS_CC);
     if (reader == NULL) {
         RETURN_FALSE;
     }
@@ -834,7 +832,7 @@ PHP_FUNCTION(phpiredis_reader_get_error)
         return;
     }
 
-    reader = fetch_resource_reader(resource);
+    reader = fetch_resource_reader(resource TSRMLS_CC);
     if (reader == NULL) {
         RETURN_FALSE;
     }
@@ -860,7 +858,7 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
         return;
     }
 
-    reader = fetch_resource_reader(resource);
+    reader = fetch_resource_reader(resource TSRMLS_CC);
     if (reader == NULL) {
         RETURN_FALSE;
     }
@@ -900,7 +898,7 @@ PHP_FUNCTION(phpiredis_reader_get_state)
         return;
     }
 
-    reader = fetch_resource_reader(resource);
+    reader = fetch_resource_reader(resource TSRMLS_CC);
     if (reader == NULL) {
         RETURN_FALSE;
     }

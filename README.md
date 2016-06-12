@@ -4,14 +4,14 @@
 [![Build status][ico-travis]][link-travis]
 
 Phpiredis is an extension for PHP 5.x and 7.x based on [hiredis](https://github.com/redis/hiredis)
-that provides a simple and efficient efficient client for Redis and a fast incremental parser for
+that provides a simple and efficient client for Redis and a fast incremental parser / serializer for
 the [RESP protocol](http://redis.io/topics/protocol).
 
 ## Installation ##
 
 Building and using this extension requires `hiredis` (>=0.9.0 <1.0.0) to be installed on the system.
 `hiredis` is usually available in the repositories of most Linux distributions, alternatively it is
-possible to build it fetching the code from its [repository](https://github.com/redis/hiredis).
+possible to build it by fetching the code from its [repository](https://github.com/redis/hiredis).
 
 ```sh
 git clone https://github.com/nrk/phpiredis.git
@@ -20,7 +20,7 @@ phpize && ./configure --enable-phpiredis
 make && make install
 ```
 
-If the configuration script is unable to locate `hiredis` on your system, you can specify in which
+When the configuration script is unable to locate `hiredis` on your system, you can specify in which
 directory it can be found using `--with-hiredis-dir=` (e.g. `--with-hiredis-dir=/usr/local`).
 
 Phpiredis provides a basic test suite that can be launched with `make test`. Tests require a running
@@ -60,8 +60,8 @@ $response = phpiredis_multi_command_bs($redis, array(
 ));
 ```
 
-The `_bs` suffix functions indicates that these functions can handle binary key names or values by
-using the unified Redis protocol available since Redis >= 1.2.
+The `_bs` suffix indicates that these functions can handle binary key names or values by using the
+unified Redis protocol available since Redis >= 1.2.
 
 Commands can still be sent using the old and deprecated inline protocol using `phpiredis_command()`
 and `phpiredis_multi_command()` (note the lack of the `_bs` suffix) but it's highly discouraged and

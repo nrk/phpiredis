@@ -1,11 +1,11 @@
 language: php
 
 php:
-    - 5.3
-    - 5.4
-    - 5.5
-    - 5.6
-    - 7.0
+  - 5.3
+  - 5.4
+  - 5.5
+  - 5.6
+  - 7.0
 
 sudo: required
 
@@ -13,24 +13,29 @@ services:
   - redis-server
 
 env:
-    global:
-        - TEST_PHP_ARGS=-q
+  global:
+    - TEST_PHP_ARGS=-q
 
 install:
-    - |
-        git clone https://github.com/redis/hiredis.git \
-        && pushd hiredis \
-        && git checkout v0.13.3 \
-        && make \
-        && sudo make install \
-        && popd
+  - |
+    git clone https://github.com/redis/hiredis.git \
+    && pushd hiredis \
+    && git checkout v0.13.3 \
+    && make \
+    && sudo make install \
+    && popd
 
 script:
-    - export NO_INTERACTION=1
-    - export REPORT_EXIT_STATUS=1
-    - . ./travis_cflags.sh
-    - phpize
-    - ./configure --enable-phpiredis
-    - make
-    - export TEST_PHP_EXECUTABLE=`which php`
-    - php run-tests.php -d extension=phpiredis.so -d extension_dir=modules -n ./*.phpt
+  - export NO_INTERACTION=1
+  - export REPORT_EXIT_STATUS=1
+  - . ./travis_cflags.sh
+  - phpize
+  - ./configure --enable-phpiredis
+  - make
+  - export TEST_PHP_EXECUTABLE=`which php`
+  - php run-tests.php -d extension=phpiredis.so -d extension_dir=modules -n ./*.phpt
+
+matrix:
+  allow_failures:
+    - php: 7.1
+  fast_finish: true

@@ -533,7 +533,7 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
     zval *p_cmdArgs;
 #ifndef ZEND_ENGINE_3
     zval cmdArgs;
-   	HashPosition cmdsPos;
+    HashPosition cmdsPos;
     zval **tmp;
 #endif
     int cmdSize;

@@ -24,17 +24,12 @@ function contains() {
     return 0
 }
 
-
-
 strictPHPVersions=()
+strictPHPVersions+=("5.3")
+strictPHPVersions+=("5.4")
+strictPHPVersions+=("5.5")
 strictPHPVersions+=("5.6")
 strictPHPVersions+=("7.0")
-
-strictImageMagickVersions=()
-strictImageMagickVersions+=("dev")
-strictImageMagickVersions+=("6.8.7-0")
-strictImageMagickVersions+=("6.7.5-3")
-strictImageMagickVersions+=("6.6.0-9")
 
 echo "TRAVIS_PHP_VERSION is ${TRAVIS_PHP_VERSION}"
 
@@ -42,10 +37,10 @@ strictPHP=$(contains "${strictPHPVersions[@]}" "${TRAVIS_PHP_VERSION}" )
 
 echo "strictPHP is ${strictPHP}"
 
-if [[ $strictPHP = '1' ]]; then 
-	CFLAGS="-Wno-deprecated-declarations -Wdeclaration-after-statement -Werror -Wall"; 
-else 
-	CFLAGS="-Wno-deprecated-declarations";
+if [[ $strictPHP = '1' ]]; then
+    CFLAGS="-Wno-deprecated-declarations -Wdeclaration-after-statement -Werror -Wall";
+else
+    CFLAGS="-Wno-deprecated-declarations";
 fi
 
 echo "Setting CFLAGS to ${CFLAGS}"

@@ -51,11 +51,11 @@ static void set_reader_status_callback(phpiredis_reader *reader, zval *function 
     free_reader_status_callback(reader TSRMLS_CC);
 
     reader->status_callback = emalloc(sizeof(callback));
-    Z_ADDREF_P(function);
 
 #ifdef ZEND_ENGINE_3
-    ZVAL_COPY_VALUE(&((callback*) reader->status_callback)->function, function);
+    ZVAL_DUP(&((callback*) reader->status_callback)->function, function);
 #else
+    Z_ADDREF_P(function);
     ((callback*) reader->status_callback)->function = function;
 #endif
 }
@@ -74,11 +74,11 @@ static void set_reader_error_callback(phpiredis_reader *reader, zval *function T
     free_reader_error_callback(reader TSRMLS_CC);
 
     reader->error_callback = emalloc(sizeof(callback));
-    Z_ADDREF_P(function);
 
 #ifdef ZEND_ENGINE_3
-    ZVAL_COPY_VALUE(&((callback*) reader->error_callback)->function, function);
+    ZVAL_DUP(&((callback*) reader->error_callback)->function, function);
 #else
+    Z_ADDREF_P(function);
     ((callback*) reader->error_callback)->function = function;
 #endif
 }

@@ -30,6 +30,7 @@ strictPHPVersions+=("5.4")
 strictPHPVersions+=("5.5")
 strictPHPVersions+=("5.6")
 strictPHPVersions+=("7.0")
+strictPHPVersions+=("7.1.0alpha1")
 
 echo "TRAVIS_PHP_VERSION is ${TRAVIS_PHP_VERSION}"
 

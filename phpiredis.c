@@ -713,6 +713,10 @@ PHP_FUNCTION(phpiredis_reader_set_status_handler)
         RETURN_FALSE;
     }
 
+#ifdef ZEND_ENGINE_3
+    ZVAL_DEREF(function);
+#endif
+
     if (Z_TYPE_P(function) == IS_NULL) {
         free_reader_status_callback(reader TSRMLS_CC);
     } else {
@@ -740,6 +744,10 @@ PHP_FUNCTION(phpiredis_reader_set_error_handler)
     if (reader == NULL) {
         RETURN_FALSE;
     }
+
+#ifdef ZEND_ENGINE_3
+    ZVAL_DEREF(function);
+#endif
 
     if (Z_TYPE_P(function) == IS_NULL) {
         free_reader_error_callback(reader TSRMLS_CC);

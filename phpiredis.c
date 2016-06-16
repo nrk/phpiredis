@@ -933,6 +933,21 @@ PHP_FUNCTION(phpiredis_reader_get_state)
     }
 }
 
+PHP_FUNCTION(phpiredis_utils_crc16)
+{
+    char *buf;
+    PHPIREDIS_LEN_TYPE buf_size;
+    uint16_t crc;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &buf, &buf_size) == FAILURE) {
+        return;
+    }
+
+    crc = crc16(buf, buf_size);
+
+    ZVAL_LONG(return_value, crc);
+}
+
 // -------------------------------------------------------------------------- //
 
 PHP_MINIT_FUNCTION(phpiredis)
@@ -977,6 +992,7 @@ static zend_function_entry phpiredis_functions[] = {
     PHP_FE(phpiredis_reader_destroy, NULL)
     PHP_FE(phpiredis_reader_set_error_handler, NULL)
     PHP_FE(phpiredis_reader_set_status_handler, NULL)
+    PHP_FE(phpiredis_utils_crc16, NULL)
     {NULL, NULL, NULL}
 };
 

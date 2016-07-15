@@ -5,10 +5,14 @@
 #include "config.h"
 #endif
 
+#include <stdint.h>
+
+uint16_t crc16(const char *buf, int len);
+
 #include "php.h"
 #include "php_ini.h"
 
-#define PHP_PHPIREDIS_VERSION "1.0.0"
+#define PHP_PHPIREDIS_VERSION "1.0.0-dev"
 #define PHP_PHPIREDIS_EXTNAME "phpiredis"
 
 PHP_MINIT_FUNCTION(phpiredis);
@@ -29,6 +33,7 @@ PHP_FUNCTION(phpiredis_reader_get_reply);
 PHP_FUNCTION(phpiredis_reader_destroy);
 PHP_FUNCTION(phpiredis_reader_set_error_handler);
 PHP_FUNCTION(phpiredis_reader_set_status_handler);
+PHP_FUNCTION(phpiredis_utils_crc16);
 
 extern zend_module_entry phpiredis_module_entry;
 #define phpext_phpiredis_ptr &phpiredis_module_entry

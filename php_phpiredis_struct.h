@@ -1,7 +1,7 @@
 #include "hiredis/hiredis.h"
 
 typedef struct _phpiredis_connection {
-    redisContext *c;
+    redisContext *ctx;
     char* ip;
     int port;
 	zend_bool is_persistent;

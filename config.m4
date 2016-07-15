@@ -37,5 +37,5 @@ if test "$PHP_PHPIREDIS" = "yes"; then
 
   AC_DEFINE(HAVE_PHPIREDIS, 1, [Whether you have phpiredis])
   PHP_SUBST(PHPIREDIS_SHARED_LIBADD)
-  PHP_NEW_EXTENSION(phpiredis, phpiredis.c, $ext_shared)
+  PHP_NEW_EXTENSION(phpiredis, phpiredis.c crc16.c, $ext_shared)
 fi

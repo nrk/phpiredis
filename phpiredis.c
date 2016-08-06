@@ -302,7 +302,7 @@ static void php_redis_reader_dtor(PHPIREDIS_RESOURCE_TYPE *rsrc TSRMLS_DC)
         }
 
         if (reader->reader != NULL) {
-            redisReplyReaderFree(reader->reader);
+            redisReaderFree(reader->reader);
         }
 
         free_reader_status_callback(reader TSRMLS_CC);
@@ -690,7 +690,7 @@ PHP_FUNCTION(phpiredis_format_command)
 PHP_FUNCTION(phpiredis_reader_create)
 {
     phpiredis_reader *reader = emalloc(sizeof(phpiredis_reader));
-    reader->reader = redisReplyReaderCreate();
+    reader->reader = redisReaderCreate();
     reader->error = NULL;
     reader->bufferedReply = NULL;
     reader->status_callback = NULL;
@@ -783,10 +783,10 @@ PHP_FUNCTION(phpiredis_reader_reset)
     }
 
     if (reader->reader != NULL) {
-        redisReplyReaderFree(reader->reader);
+        redisReaderFree(reader->reader);
     }
 
-    reader->reader = redisReplyReaderCreate();
+    reader->reader = redisReaderCreate();
 }
 
 PHP_FUNCTION(phpiredis_reader_destroy)
@@ -828,7 +828,7 @@ PHP_FUNCTION(phpiredis_reader_feed)
         RETURN_FALSE;
     }
 
-    redisReplyReaderFeed(reader->reader, bytes, size);
+    redisReaderFeed(reader->reader, bytes, size);
 }
 
 PHP_FUNCTION(phpiredis_reader_get_error)
@@ -875,11 +875,11 @@ PHP_FUNCTION(phpiredis_reader_get_reply)
         aux = reader->bufferedReply;
         reader->bufferedReply = NULL;
     } else {
-        if (redisReplyReaderGetReply(reader->reader, (void **)&aux) == REDIS_ERR) {
+        if (redisReaderGetReply(reader->reader, (void **)&aux) == REDIS_ERR) {
             if (reader->error != NULL) {
                 efree(reader->error);
             }
-            reader->error = redisReplyReaderGetError(reader->reader);
+            reader->error = redisReaderGetError(reader->reader);
 
             RETURN_FALSE; // error
         } else if (aux == NULL) {
@@ -914,11 +914,11 @@ PHP_FUNCTION(phpiredis_reader_get_state)
     if (reader->error == NULL && reader->bufferedReply == NULL) {
         void *aux;
 
-        if (redisReplyReaderGetReply(reader->reader, &aux) == REDIS_ERR) {
+        if (redisReaderGetReply(reader->reader, &aux) == REDIS_ERR) {
             if (reader->error != NULL) {
                 efree(reader->error);
             }
-            reader->error = redisReplyReaderGetError(reader->reader);
+            reader->error = redisReaderGetError(reader->reader);
         } else {
             reader->bufferedReply = aux;
         }

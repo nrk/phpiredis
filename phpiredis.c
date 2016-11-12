@@ -368,6 +368,11 @@ static phpiredis_connection *s_create_connection(const char *ip, int port, zend_
 
 // -------------------------------------------------------------------------- //
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_connect, 0, 0, 1)
+    ZEND_ARG_INFO(0, ip)
+    ZEND_ARG_INFO(0, port)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(phpiredis_connect)
 {
     phpiredis_connection *connection;
@@ -477,6 +482,11 @@ PHP_FUNCTION(phpiredis_disconnect)
     RETURN_TRUE;
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_multi_command, 0, 0, 2)
+    ZEND_ARG_INFO(0, connection)
+    ZEND_ARG_ARRAY_INFO(0, commands, 0)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(phpiredis_multi_command)
 {
     zval *resource, *cmds;
@@ -583,6 +593,11 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
     get_pipeline_responses(connection, return_value, commands TSRMLS_CC);
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_command, 0, 0, 2)
+    ZEND_ARG_INFO(0, connection)
+    ZEND_ARG_INFO(0, command)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(phpiredis_command)
 {
     zval *resource;
@@ -615,6 +630,11 @@ PHP_FUNCTION(phpiredis_command)
     convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);
     freeReplyObject(reply);
 }
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_command_bs, 0, 0, 2)
+    ZEND_ARG_INFO(0, connection)
+    ZEND_ARG_ARRAY_INFO(0, args, 0)
+ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(phpiredis_command_bs)
 {
@@ -661,6 +681,10 @@ PHP_FUNCTION(phpiredis_command_bs)
     freeReplyObject(reply);
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_format_command, 0, 0, 1)
+    ZEND_ARG_ARRAY_INFO(0, args, 0)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(phpiredis_format_command)
 {
     zval *cmdArgs;
@@ -690,7 +714,13 @@ PHP_FUNCTION(phpiredis_format_command)
 
 PHP_FUNCTION(phpiredis_reader_create)
 {
-    phpiredis_reader *reader = emalloc(sizeof(phpiredis_reader));
+    phpiredis_reader *reader;
+
+    if (zend_parse_parameters_none() == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    reader = emalloc(sizeof(phpiredis_reader));
     reader->reader = redisReplyReaderCreate();
     reader->error = NULL;
     reader->bufferedReply = NULL;
@@ -813,6 +843,11 @@ PHP_FUNCTION(phpiredis_reader_destroy)
     RETURN_TRUE;
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_reader_feed, 0, 0, 2)
+    ZEND_ARG_INFO(0, connection)
+    ZEND_ARG_INFO(0, buffer)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(phpiredis_reader_feed)
 {
     zval *resource;
@@ -856,6 +891,11 @@ PHP_FUNCTION(phpiredis_reader_get_error)
     ZVAL_STRINGL(return_value, reader->error, strlen(reader->error), 1);
 #endif
 }
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_reader_get_reply, 0, 0, 1)
+    ZEND_ARG_INFO(0, ptr)
+    ZEND_ARG_INFO(1, type)
+ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(phpiredis_reader_get_reply)
 {
@@ -934,6 +974,10 @@ PHP_FUNCTION(phpiredis_reader_get_state)
     }
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_utils_crc16, 0, 0, 1)
+    ZEND_ARG_INFO(0, buffer)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(phpiredis_utils_crc16)
 {
     char *buf;
@@ -970,31 +1014,45 @@ PHP_MINIT_FUNCTION(phpiredis)
     return SUCCESS;
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_reader_get_reply, 0, 0, 1)
-    ZEND_ARG_INFO(0, ptr)
-    ZEND_ARG_INFO(1, type)
+/* arginfo shared by various functions */
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_void, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_conn, 0, 0, 1)
+    ZEND_ARG_INFO(0, connection)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_callback, 0, 0, 2)
+    ZEND_ARG_INFO(0, connection)
+    ZEND_ARG_INFO(0, callback)
+ZEND_END_ARG_INFO()
+
+
 static zend_function_entry phpiredis_functions[] = {
-    PHP_FE(phpiredis_connect, NULL)
-    PHP_FE(phpiredis_pconnect, NULL)
-    PHP_FE(phpiredis_disconnect, NULL)
-    PHP_FE(phpiredis_command, NULL)
-    PHP_FE(phpiredis_command_bs, NULL)
-    PHP_FE(phpiredis_multi_command, NULL)
-    PHP_FE(phpiredis_multi_command_bs, NULL)
-    PHP_FE(phpiredis_format_command, NULL)
-    PHP_FE(phpiredis_reader_create, NULL)
-    PHP_FE(phpiredis_reader_reset, NULL)
-    PHP_FE(phpiredis_reader_feed, NULL)
-    PHP_FE(phpiredis_reader_get_state, NULL)
-    PHP_FE(phpiredis_reader_get_error, NULL)
+    PHP_FE(phpiredis_connect, arginfo_phpiredis_connect)
+    PHP_FE(phpiredis_pconnect, arginfo_phpiredis_connect)
+    PHP_FE(phpiredis_disconnect, arginfo_phpiredis_conn)
+    PHP_FE(phpiredis_command, arginfo_phpiredis_command)
+    PHP_FE(phpiredis_command_bs, arginfo_phpiredis_command_bs)
+    PHP_FE(phpiredis_multi_command, arginfo_phpiredis_multi_command)
+    PHP_FE(phpiredis_multi_command_bs, arginfo_phpiredis_multi_command)
+    PHP_FE(phpiredis_format_command, arginfo_phpiredis_format_command)
+    PHP_FE(phpiredis_reader_create, arginfo_phpiredis_void)
+    PHP_FE(phpiredis_reader_reset, arginfo_phpiredis_conn)
+    PHP_FE(phpiredis_reader_feed, arginfo_phpiredis_reader_feed)
+    PHP_FE(phpiredis_reader_get_state, arginfo_phpiredis_conn)
+    PHP_FE(phpiredis_reader_get_error, arginfo_phpiredis_conn)
     PHP_FE(phpiredis_reader_get_reply, arginfo_phpiredis_reader_get_reply)
-    PHP_FE(phpiredis_reader_destroy, NULL)
-    PHP_FE(phpiredis_reader_set_error_handler, NULL)
-    PHP_FE(phpiredis_reader_set_status_handler, NULL)
-    PHP_FE(phpiredis_utils_crc16, NULL)
+    PHP_FE(phpiredis_reader_destroy, arginfo_phpiredis_conn)
+    PHP_FE(phpiredis_reader_set_error_handler, arginfo_phpiredis_callback)
+    PHP_FE(phpiredis_reader_set_status_handler, arginfo_phpiredis_callback)
+    PHP_FE(phpiredis_utils_crc16, arginfo_phpiredis_utils_crc16)
+#ifdef PHP_FE_END
+    PHP_FE_END
+#else
     {NULL, NULL, NULL}
+#endif
 };
 
 zend_module_entry phpiredis_module_entry = {

@@ -25,6 +25,7 @@ int le_redis_persistent_context;
     #define PHPIREDIS_RESOURCE_TYPE zend_rsrc_list_entry
     #define PHPIREDIS_RETURN_RESOURCE(connection, context) \
         ZEND_REGISTER_RESOURCE(return_value, connection, context)
+    typedef long zend_long;
 #endif
 
 typedef struct callback {
@@ -372,7 +373,7 @@ PHP_FUNCTION(phpiredis_connect)
     phpiredis_connection *connection;
     char *ip;
     PHPIREDIS_LEN_TYPE ip_size;
-    long port = 6379;
+    zend_long port = 6379;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &ip, &ip_size, &port) == FAILURE) {
         return;
@@ -391,7 +392,7 @@ PHP_FUNCTION(phpiredis_pconnect)
 {
     char *ip;
     PHPIREDIS_LEN_TYPE ip_size;
-    long port = 6379;
+    zend_long port = 6379;
 
     char *hashed_details = NULL;
     PHPIREDIS_LEN_TYPE hashed_details_length;

@@ -1055,6 +1055,20 @@ static zend_function_entry phpiredis_functions[] = {
 #endif
 };
 
+static PHP_MINFO_FUNCTION(phpiredis)
+{
+    char buf[32];
+
+    php_info_print_table_start();
+
+    php_info_print_table_row(2, "phpiredis", "enabled");
+    php_info_print_table_row(2, "phpiredis version", PHP_PHPIREDIS_VERSION);
+    snprintf(buf, sizeof(buf), "%d.%d.%d", HIREDIS_MAJOR, HIREDIS_MINOR, HIREDIS_PATCH);
+    php_info_print_table_row(2, "hiredis version", buf);
+
+    php_info_print_table_end();
+}
+
 zend_module_entry phpiredis_module_entry = {
 #if ZEND_MODULE_API_NO >= 20010901
     STANDARD_MODULE_HEADER,
@@ -1065,7 +1079,7 @@ zend_module_entry phpiredis_module_entry = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    PHP_MINFO(phpiredis),
 #if ZEND_MODULE_API_NO >= 20010901
     PHP_PHPIREDIS_VERSION,
 #endif

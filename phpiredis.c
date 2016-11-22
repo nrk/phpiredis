@@ -25,6 +25,7 @@ int le_redis_persistent_context;
     #define PHPIREDIS_RESOURCE_TYPE zend_rsrc_list_entry
     #define PHPIREDIS_RETURN_RESOURCE(connection, context) \
         ZEND_REGISTER_RESOURCE(return_value, connection, context)
+    typedef long zend_long;
 #endif
 
 typedef struct callback {
@@ -338,12 +339,23 @@ static phpiredis_reader *fetch_resource_reader(zval *resource TSRMLS_DC)
     return reader;
 }
 
-static phpiredis_connection *s_create_connection(const char *ip, int port, zend_bool is_persistent)
+static phpiredis_connection *s_create_connection(const char *ip, int port, zend_long timeout, zend_bool is_persistent)
 {
     redisContext *ctx;
     phpiredis_connection *connection;
 
-    if (ip[0] == '/') {
+    if (timeout > 0) {
+        struct timeval tv;
+
+        tv.tv_sec = timeout / 1000; /* msec to sec */
+        tv.tv_usec = (timeout % 1000) * 1000; /* msec to usec */
+
+        if (ip[0] == '/') {
+            ctx = redisConnectUnixWithTimeout(ip, tv);
+        } else {
+            ctx = redisConnectWithTimeout(ip, port, tv);
+        }
+    } else if (ip[0] == '/') {
         // We ignore the value of "port" if the string value in "ip" starts with
         // a slash character indicating a UNIX domain socket path.
         ctx = redisConnectUnix(ip);
@@ -367,18 +379,24 @@ static phpiredis_connection *s_create_connection(const char *ip, int port, zend_
 
 // -------------------------------------------------------------------------- //
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_connect, 0, 0, 1)
+    ZEND_ARG_INFO(0, ip)
+    ZEND_ARG_INFO(0, port)
+    ZEND_ARG_INFO(0, timeout_ms)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(phpiredis_connect)
 {
     phpiredis_connection *connection;
     char *ip;
     PHPIREDIS_LEN_TYPE ip_size;
-    long port = 6379;
+    zend_long port = 6379, timeout = 0;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &ip, &ip_size, &port) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|ll", &ip, &ip_size, &port, &timeout) == FAILURE) {
         return;
     }
 
-    connection = s_create_connection(ip, port, 0);
+    connection = s_create_connection(ip, port, timeout, 0);
 
     if (!connection) {
         RETURN_FALSE;
@@ -391,7 +409,7 @@ PHP_FUNCTION(phpiredis_pconnect)
 {
     char *ip;
     PHPIREDIS_LEN_TYPE ip_size;
-    long port = 6379;
+    zend_long port = 6379, timeout;
 
     char *hashed_details = NULL;
     PHPIREDIS_LEN_TYPE hashed_details_length;
@@ -403,7 +421,7 @@ PHP_FUNCTION(phpiredis_pconnect)
     zend_rsrc_list_entry new_le, *le;
 #endif
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &ip, &ip_size, &port) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|ll", &ip, &ip_size, &port, &timeout) == FAILURE) {
         return;
     }
 
@@ -429,7 +447,7 @@ PHP_FUNCTION(phpiredis_pconnect)
         return;
     }
 
-    connection = s_create_connection(ip, port, 1);
+    connection = s_create_connection(ip, port, timeout, 1);
 
     if (!connection) {
         efree(hashed_details);
@@ -475,6 +493,11 @@ PHP_FUNCTION(phpiredis_disconnect)
 
     RETURN_TRUE;
 }
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_multi_command, 0, 0, 2)
+    ZEND_ARG_INFO(0, connection)
+    ZEND_ARG_ARRAY_INFO(0, commands, 0)
+ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(phpiredis_multi_command)
 {
@@ -582,6 +605,11 @@ PHP_FUNCTION(phpiredis_multi_command_bs)
     get_pipeline_responses(connection, return_value, commands TSRMLS_CC);
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_command, 0, 0, 2)
+    ZEND_ARG_INFO(0, connection)
+    ZEND_ARG_INFO(0, command)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(phpiredis_command)
 {
     zval *resource;
@@ -614,6 +642,11 @@ PHP_FUNCTION(phpiredis_command)
     convert_redis_to_php(NULL, return_value, reply TSRMLS_CC);
     freeReplyObject(reply);
 }
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_command_bs, 0, 0, 2)
+    ZEND_ARG_INFO(0, connection)
+    ZEND_ARG_ARRAY_INFO(0, args, 0)
+ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(phpiredis_command_bs)
 {
@@ -660,6 +693,10 @@ PHP_FUNCTION(phpiredis_command_bs)
     freeReplyObject(reply);
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_format_command, 0, 0, 1)
+    ZEND_ARG_ARRAY_INFO(0, args, 0)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(phpiredis_format_command)
 {
     zval *cmdArgs;
@@ -689,7 +726,13 @@ PHP_FUNCTION(phpiredis_format_command)
 
 PHP_FUNCTION(phpiredis_reader_create)
 {
-    phpiredis_reader *reader = emalloc(sizeof(phpiredis_reader));
+    phpiredis_reader *reader;
+
+    if (zend_parse_parameters_none() == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    reader = emalloc(sizeof(phpiredis_reader));
     reader->reader = redisReplyReaderCreate();
     reader->error = NULL;
     reader->bufferedReply = NULL;
@@ -812,6 +855,11 @@ PHP_FUNCTION(phpiredis_reader_destroy)
     RETURN_TRUE;
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_reader_feed, 0, 0, 2)
+    ZEND_ARG_INFO(0, connection)
+    ZEND_ARG_INFO(0, buffer)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(phpiredis_reader_feed)
 {
     zval *resource;
@@ -855,6 +903,11 @@ PHP_FUNCTION(phpiredis_reader_get_error)
     ZVAL_STRINGL(return_value, reader->error, strlen(reader->error), 1);
 #endif
 }
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_reader_get_reply, 0, 0, 1)
+    ZEND_ARG_INFO(0, ptr)
+    ZEND_ARG_INFO(1, type)
+ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(phpiredis_reader_get_reply)
 {
@@ -933,6 +986,10 @@ PHP_FUNCTION(phpiredis_reader_get_state)
     }
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_utils_crc16, 0, 0, 1)
+    ZEND_ARG_INFO(0, buffer)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(phpiredis_utils_crc16)
 {
     char *buf;
@@ -969,32 +1026,60 @@ PHP_MINIT_FUNCTION(phpiredis)
     return SUCCESS;
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_reader_get_reply, 0, 0, 1)
-    ZEND_ARG_INFO(0, ptr)
-    ZEND_ARG_INFO(1, type)
+/* arginfo shared by various functions */
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_void, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_conn, 0, 0, 1)
+    ZEND_ARG_INFO(0, connection)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_phpiredis_callback, 0, 0, 2)
+    ZEND_ARG_INFO(0, connection)
+    ZEND_ARG_INFO(0, callback)
+ZEND_END_ARG_INFO()
+
+
 static zend_function_entry phpiredis_functions[] = {
-    PHP_FE(phpiredis_connect, NULL)
-    PHP_FE(phpiredis_pconnect, NULL)
-    PHP_FE(phpiredis_disconnect, NULL)
-    PHP_FE(phpiredis_command, NULL)
-    PHP_FE(phpiredis_command_bs, NULL)
-    PHP_FE(phpiredis_multi_command, NULL)
-    PHP_FE(phpiredis_multi_command_bs, NULL)
-    PHP_FE(phpiredis_format_command, NULL)
-    PHP_FE(phpiredis_reader_create, NULL)
-    PHP_FE(phpiredis_reader_reset, NULL)
-    PHP_FE(phpiredis_reader_feed, NULL)
-    PHP_FE(phpiredis_reader_get_state, NULL)
-    PHP_FE(phpiredis_reader_get_error, NULL)
+    PHP_FE(phpiredis_connect, arginfo_phpiredis_connect)
+    PHP_FE(phpiredis_pconnect, arginfo_phpiredis_connect)
+    PHP_FE(phpiredis_disconnect, arginfo_phpiredis_conn)
+    PHP_FE(phpiredis_command, arginfo_phpiredis_command)
+    PHP_FE(phpiredis_command_bs, arginfo_phpiredis_command_bs)
+    PHP_FE(phpiredis_multi_command, arginfo_phpiredis_multi_command)
+    PHP_FE(phpiredis_multi_command_bs, arginfo_phpiredis_multi_command)
+    PHP_FE(phpiredis_format_command, arginfo_phpiredis_format_command)
+    PHP_FE(phpiredis_reader_create, arginfo_phpiredis_void)
+    PHP_FE(phpiredis_reader_reset, arginfo_phpiredis_conn)
+    PHP_FE(phpiredis_reader_feed, arginfo_phpiredis_reader_feed)
+    PHP_FE(phpiredis_reader_get_state, arginfo_phpiredis_conn)
+    PHP_FE(phpiredis_reader_get_error, arginfo_phpiredis_conn)
     PHP_FE(phpiredis_reader_get_reply, arginfo_phpiredis_reader_get_reply)
-    PHP_FE(phpiredis_reader_destroy, NULL)
-    PHP_FE(phpiredis_reader_set_error_handler, NULL)
-    PHP_FE(phpiredis_reader_set_status_handler, NULL)
-    PHP_FE(phpiredis_utils_crc16, NULL)
+    PHP_FE(phpiredis_reader_destroy, arginfo_phpiredis_conn)
+    PHP_FE(phpiredis_reader_set_error_handler, arginfo_phpiredis_callback)
+    PHP_FE(phpiredis_reader_set_status_handler, arginfo_phpiredis_callback)
+    PHP_FE(phpiredis_utils_crc16, arginfo_phpiredis_utils_crc16)
+#ifdef PHP_FE_END
+    PHP_FE_END
+#else
     {NULL, NULL, NULL}
+#endif
 };
+
+static PHP_MINFO_FUNCTION(phpiredis)
+{
+    char buf[32];
+
+    php_info_print_table_start();
+
+    php_info_print_table_row(2, "phpiredis", "enabled");
+    php_info_print_table_row(2, "phpiredis version", PHP_PHPIREDIS_VERSION);
+    snprintf(buf, sizeof(buf), "%d.%d.%d", HIREDIS_MAJOR, HIREDIS_MINOR, HIREDIS_PATCH);
+    php_info_print_table_row(2, "hiredis version", buf);
+
+    php_info_print_table_end();
+}
 
 zend_module_entry phpiredis_module_entry = {
 #if ZEND_MODULE_API_NO >= 20010901
@@ -1006,7 +1091,7 @@ zend_module_entry phpiredis_module_entry = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    PHP_MINFO(phpiredis),
 #if ZEND_MODULE_API_NO >= 20010901
     PHP_PHPIREDIS_VERSION,
 #endif

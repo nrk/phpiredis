@@ -12,9 +12,9 @@ require_once 'testsuite_utilities.inc';
 $redis = create_phpiredis_connection(REDIS_HOST, REDIS_PORT);
 
 $commands = phpiredis_multi_command_bs($redis, array(
-    array('DEL', 'test'),
-    array('SET', 'test', '1'),
-    array('GET', 'test')
+    array('DEL', TESTKEY),
+    array('SET', TESTKEY, '1'),
+    array('GET', TESTKEY)
 ));
 
 var_dump($commands[2]);

@@ -13,6 +13,9 @@ Building and using this extension requires `hiredis` (>=0.9.0 <1.0.0) to be inst
 `hiredis` is usually available in the repositories of most Linux distributions, alternatively it is
 possible to build it by fetching the code from its [repository](https://github.com/redis/hiredis).
 
+`Note`: Installing the phpiredis extension requires php to install both the APC and APCU extensions, 
+otherwise the dynamic library cannot be loaded.
+
 ```sh
 git clone https://github.com/nrk/phpiredis.git
 cd phpiredis

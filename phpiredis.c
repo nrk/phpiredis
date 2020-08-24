@@ -28,6 +28,11 @@ int le_redis_persistent_context;
     typedef long zend_long;
 #endif
 
+#ifndef TSRMLS_CC
+#define TSRMLS_CC
+#define TSRMLS_DC
+#endif
+
 typedef struct callback {
 #ifdef ZEND_ENGINE_3
     zval function;

@@ -12,7 +12,7 @@ uint16_t crc16(const char *buf, int len);
 #include "php.h"
 #include "php_ini.h"
 
-#define PHP_PHPIREDIS_VERSION "1.0.0"
+#define PHP_PHPIREDIS_VERSION "1.0.1"
 #define PHP_PHPIREDIS_EXTNAME "phpiredis"
 
 PHP_MINIT_FUNCTION(phpiredis);

@@ -9,7 +9,7 @@ the [RESP protocol](http://redis.io/topics/protocol).
 
 ## Installation ##
 
-Building and using this extension requires `hiredis` (>=0.9 <0.14) to be installed on the system.
+Building and using this extension requires `hiredis` (>=0.14, >=1.0) to be installed on the system.
 `hiredis` is usually available in the repositories of most Linux distributions, alternatively it is
 possible to build it by fetching the code from its [repository](https://github.com/redis/hiredis).
 

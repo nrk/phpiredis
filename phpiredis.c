@@ -33,6 +33,14 @@ int le_redis_persistent_context;
 #define TSRMLS_DC
 #endif
 
+#if HIREDIS_MAJOR > 0 || HIREDIS_MINOR >= 14
+#define redisReplyReaderGetReply redisReaderGetReply
+#define redisReplyReaderFeed     redisReaderFeed
+#define redisReplyReaderGetError redisReaderGetError
+#define redisReplyReaderFree     redisReaderFree
+#define redisReplyReaderCreate   redisReaderCreate
+#endif
+
 typedef struct callback {
 #ifdef ZEND_ENGINE_3
     zval function;
